@@ -79,7 +79,8 @@ class Picorna():
         url = lambda phrase: url_base + urllib.urlencode({'q':phrase})
         # this returns the file associated with a url + query
         def open_url(v,sample):
-            u = url('"%s"+%s'%(v.name,sample))
+            name = v.name.split(" ")[:3]
+            u = url('"%s"+%s'%(name,sample))
             print "query: %s"%u
             return urllib.urlopen(u)
         # this pulls the number of results from the object returned by google
@@ -88,10 +89,9 @@ class Picorna():
             try:
                 return int(result[key1][key2][key3])
             except KeyError:
-                print result
                 return 0
         # these are out labels
-        labels = ["insect","mammal","plant"]
+        labels = ["insect"] + ["mammal"] + ["plant"]
         # these are the sample organisms against which to search
         samples = ['bee','rat','strawberry']
         # now go through each virus and choose the label associated with the
@@ -102,9 +102,14 @@ class Picorna():
                 n.append(
                     get_n(json.load(open_url(v,sample)))
                 )
-                time.sleep(5)
-            self.viruses[i].label = labels[n.index(max(n))]
-            print "%s is a %s virus"%(v.name,self.viruses[i].label)
+                time.sleep(1)
+            if sum(n):
+                self.viruses[i].label = labels[n.index(max(n))]
+                print "%s is a %s virus"%(v.name,self.viruses[i].label)
+                print "insect: %s, mammal: %s, plant:%s"%tuple(n)
+            else:
+                self.viruses[i].label = "undetermined"
+                print "%s is undetermined"%v.name
 
 
 if __name__=="__main__":
