@@ -2,18 +2,6 @@ import urllib
 import json
 import time
 
-def google_search(phrase):
-        """Get google search results for the phrase"""
-
-        referer = "http://kevinrodrigues.com"
-
-        
-
-        
-
-if __name__ == '__main__':
-        google_search('Kevin Rodrigues')
-
 class Genome():
     def __init__(self,name):
         self.name = name
