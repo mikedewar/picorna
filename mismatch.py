@@ -1,60 +1,55 @@
 import numpy as np
 import itertools
+import timeit
 
-class Neighbourhood():
-    
-    def __init__(self,k,m):
-        """
-        m : int
-            number of allowed mismatches
-        """
-        self.m = m
-    
-    def __call__(self,alpha):
-        return NeighbourhoodTester(alpha,self.m)
-    
+def form_all_kmers(A,k):
+    all_kmers = itertools.product(A,repeat=k)
+    return np.array([beta for beta in all_kmers])
 
-class NeighbourhoodTester():
-    
-    def __init__(self,alpha,m):
-        self.alpha = alpha
-        self.m = m
-        
-    def __contains__(self,beta):
-        assert len(self.alpha) == len(beta)
-        return  self.m >= sum([a!=b for (a,b) in zip(self.alpha,beta)])
-    
-
-def gen_features(x,k,m,A=None):
+def gen_features(x,m,beta):
     """
     x : 
         protein sequence
-    k : 
-        length of substring
     m : 
         number of mismatches
-    A : list
-        alphabet (defaults to the unique values in x)
+    beta : array
+        all possibly kmers
     """
-    if not A:
-        A = np.unique(x)
-    all_kmers_in_x = np.unique([
-        kmer_i for kmer_i in itertools.ifilter(
-            lambda s: s in x, 
-            [''.join(a) for a in itertools.combinations(x,k)]
-        )
-    ])
-    all_kmers = [''.join(a) for a in itertools.product(A,repeat=k)]
+    print "forming kmers"
+    k = len(beta[0])
+    all_kmers_in_x = [x[i:i+k] for i in range(len(x)-2)]
+    alpha = np.array([list(a) for a in all_kmers_in_x])
+    
     # form features
-    N_km = Neighbourhood(k,m)
-    phi = lambda alpha,beta: (0,1)[beta in N_km(alpha)]
-    Phi = lambda alpha: [phi(alpha,beta) for beta in all_kmers]
-    return np.sum(np.array([Phi(alpha) for alpha in all_kmers_in_x]),0)
+    print "forming features"
+    
+    n1 = alpha.shape[0]
+    n2 = beta.shape[0]
+    
+    mismatches = np.repeat(alpha, n2, 0) != np.tile(beta, (n1,1))
+    tested = np.sum(mismatches,1) <= m
+    tested_reshaped = np.reshape(tested,(n2,n1))
+    return np.sum(tested_reshaped,1)
 
 if __name__ == "__main__":
-    # this is a line from a protein
-    x = "MEHTPLLSSFPITLLDHCGGNRKIHWTRCYEQKYWLPFSCCKVASRLPCVNVRRSYMWYSKKQSKWIYLS"
-    print gen_features(x,k=3,m=2)
+    
+    x = """MEHTPLLSSFPITLLDHCGGNRKIHWTRCYEQKYWLPFSCCKVASRLPCVNVRRSYMWYSKKQSKWIYLS
+ESDFRACKAGIYKRREEQEKEKLWSELCDICSWECFEYYKFRDQRLLLLLRKKIADKAQCRCRTNCKLVT
+IKHGYVRRVKTIEPCEAIELTNAETFGSNLDFAQPEMDRPEGSEERTVQTSNVVLGETNIESQDIASKEY
+SPTWDRLASSEVSDEYPMLTDRWLFWKSVKWEVNDSAFGKMLVQEKFPQSWVQMDVNVNNIPRYTNIPNF"""
+
+    beta = form_all_kmers(np.unique(x),3)
+    gen_features(x,m=2,beta=beta)
+
+    to_run = """
+    import mismatch
+    import numpy as np
+    x = 'MEHTPLLSSFPITLLDHCGGNRKIHWTRCYEQKYWLPFSCCKVASRLPCVNVRRSYMWYSKKQSKWIYLS'
+    beta = mismatch.form_all_kmers(np.unique(x),3)
+    mismatch.gen_features(x,m=2,beta=beta)
+    """
+    
+# print timeit.Timer(to_run).timeit(number=10)/10
     
     
     
