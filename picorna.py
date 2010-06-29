@@ -1,8 +1,9 @@
 import urllib
 import json
 import time
+from mismatch import *
 
-class Genome():
+class Protein():
     def __init__(self,name):
         self.name = name
         self.lines = []
@@ -10,39 +11,44 @@ class Genome():
     def add_line(self,line):
         self.lines.append(line)
         
-    def finish(self):
+    def finish(self,k,m):
         self.data = "".join(self.lines)
+        self.feature = gen_features(self.data,k,m)
         
     def __str__(self):
         return self.name + "\n" + self.data
 
 class Virus():
-    def __init__(self,name):
+    def __init__(self,name,k,m):
         self.name = name
-        self.genomes = []
+        self.proteins = []
         self.label = None
-    
+        self.k = k
+        self.m = m
+        
     def add_line(self,line):
         if ">" in line:
-            if len(self.genomes):
-                self.genomes[-1].finish()
-            self.genomes.append(Genome(line))
+            if len(self.proteins):
+                self.proteins[-1].finish()
+            self.proteins.append(Protein(line))
         else:
-            self.genomes[-1].add_line(line)
-        self.genomes[-1].finish()
+            self.proteins[-1].add_line(line)
+        self.proteins[-1].finish(self.k,self.m)
     
     def __len__(self):
-        return len(self.genomes)
+        return len(self.proteins)
     
     def __getitem__(self,i):
-        return self.genomes[i]
+        return self.proteins[i]
     
     def __str__(self):
         return self.name
 
 class Picorna():
-    def __init__(self,filename='picornavirus-proteins.fasta'):
+    def __init__(self,k,m,filename='picornavirus-proteins.fasta'):
         self.viruses = []
+        self.k = k
+        self.m = m
         f = open(filename,'r').readlines()
         f = [fi.strip() for fi in f]
         for line in f:
@@ -50,10 +56,11 @@ class Picorna():
                 full_name = line.split(",")[0]
                 name_elements = full_name.split(' ')
                 virus_name = ' '.join(name_elements[1:])
-                self.viruses.append(Virus(virus_name))
+                print "processing %s"%virus_name
+                self.viruses.append(Virus(virus_name,self.k,self.m))
             else:
                 self.viruses[-1].add_line(line)
-        self.gen_labels()
+        #self.gen_labels()
     
     def __len__(self):
         return len(self.viruses)
@@ -79,14 +86,14 @@ class Picorna():
             except KeyError:
                 return 0
         # these are out labels
-        labels = ["insect"] + ["mammal"] + ["plant"]
+        labels = ["invertebrate"] + ["vertebrate"] + ["plant"]
         # these are the sample organisms against which to search
         samples = ['bee','rat','strawberry']
         # now go through each virus and choose the label associated with the
         # maximum number of search results
         for i,v in enumerate(self.viruses):
             n = []
-            for sample in samples:
+            for sample in labels:
                 n.append(
                     get_n(json.load(open_url(v,sample)))
                 )
@@ -98,8 +105,10 @@ class Picorna():
             else:
                 self.viruses[i].label = "undetermined"
                 print "%s is undetermined"%v.name
-
+            
+        
+    
 
 if __name__=="__main__":
-    v = Picorna()
+    v = Picorna(k=3,m=2)
     print v.viruses[6].genomes[1]
