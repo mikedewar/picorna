@@ -1,6 +1,4 @@
 import numpy as np
-import splitdata as split
-import loaddata
 import cPickle
 import time
 import pdb
@@ -21,13 +19,13 @@ def adaboostMH(X,Y,x,y,f,model='stump'):
 	dfname = filedir+'dump'+filetag+'.dump'
 	
 	# Initial weight over examples - Uniform
-	w = np.ones(Y.shape,dtype='float32')/(N*K)
-#	w = (1+Y)/(4*N) + (1-Y)/(4*N*(K-1))
+	w = np.ones(Y.shape, dtype='float32')/(N*K)
+    # w = (1+Y)/(4*N) + (1-Y)/(4*N*(K-1))
 
 	# Initialize decision tree, prediction list objects
 	Tpredlist = []; tpredlist = []; dectree = []
-	Tpred = np.zeros((N,T+1),dtype='float32')
-	tpred = np.zeros((n,T+1),dtype='float32')
+	Tpred = np.zeros((N,T+1), dtype='float32')
+	tpred = np.zeros((n,T+1), dtype='float32')
 
 	starttime = time.time()
 	# root decision function/prediction node.
@@ -41,33 +39,41 @@ def adaboostMH(X,Y,x,y,f,model='stump'):
 	a = 0.5*np.log((1+gamma)/(1-gamma))
 
 	# update decision tree and prediction list.
-	Philist = dict(); Philist[-1] = np.ones((1,N),dtype='float32')
-	philist = dict(); philist[-1] = np.ones((1,n),dtype='float32')
+	Philist = dict(); Philist[-1] = np.ones((1, N), dtype='float32')
+	philist = dict(); philist[-1] = np.ones((1, n), dtype='float32')
 	Hweakrule = v*Philist[-1]
 	hweakrule = v*philist[-1]
-	Tpredlist = [[1,a,Hweakrule,0]]
-	tpredlist = [[1,a,hweakrule,0]]
-	dectree = [[1,[a,[]],-1]]
+	Tpredlist = [[1, a, Hweakrule, 0]]
+	tpredlist = [[1, a, hweakrule, 0]]
+	dectree = [[1, [a, []], -1]]
 	dlen = 1; plen = 1; clen = D
 
 	# training and test error
-	train_pred = np.zeros((K,N),dtype='float32')
-	test_pred = np.zeros((K,n),dtype='float32')
+	train_pred = np.zeros((K, N), dtype='float32')
+	test_pred = np.zeros((K, n), dtype='float32')
 	for idx in range(plen):
 		train_pred = train_pred + Tpredlist[idx][1]*Tpredlist[idx][2]
 		test_pred = test_pred + tpredlist[idx][1]*tpredlist[idx][2]
 
-	Tpred[:,0] = np.argmax(train_pred,0)
-	tpred[:,0] = np.argmax(test_pred,0)
-	trainerr, testerr = compute_error(train_pred,test_pred,Y,y)
+	Tpred[:, 0] = np.argmax(train_pred, 0)
+	tpred[:, 0] = np.argmax(test_pred, 0)
+	trainerr, testerr = compute_error(train_pred, test_pred, Y, y)
 	duration = time.time() - starttime
-
+    
 	# write output to file
 	owrite = open(onfname,'a')
-	owrite.write(str(-1)+'\t'+str(a)+'\t'+str((train_pred*Y).sum()/float(K*N))+'\t'+str(trainerr)+'\t'+str((test_pred*y).sum()/float(K*n))+'\t'+str(testerr)+'\t'+str(duration)+'\n')
+	to_write = [
+	    -1, 
+	    a, 
+	    (train_pred*Y).sum()/float(K*N), 
+	    trainerr, 
+	    (test_pred*y).sum()/float(K*n), 
+	    testerr, 
+	    duration
+	]
+	owrite.write('\t'.join([str(s) for s in to_write]))
 	owrite.close()
-	print -1, a, (train_pred*Y).sum()/float(K*N), trainerr, (test_pred*y).sum()/float(K*n), testerr, duration
-
+	print to_write
 	# update weights
 	Wt = []
 	wnew = w*np.exp(-a*Hweakrule*Y)
@@ -80,13 +86,13 @@ def adaboostMH(X,Y,x,y,f,model='stump'):
 		starttime = time.time()
 
 		# choose the appropriate (leaf+weak rule) for the next prediction function
-		pstar, cstar, astar = get_weak_rule(X,Y,Philist,w,model)
+		pstar, cstar, astar = get_weak_rule(X, Y, Philist, w, model)
 		if astar:	# negations
-			Philist[t] = Philist[pstar]*(1-X[cstar:cstar+1,:])
-			philist[t] = philist[pstar]*(1-x[cstar:cstar+1,:])
+			Philist[t] = Philist[pstar]*(1-X[cstar:cstar+1, :])
+			philist[t] = philist[pstar]*(1-x[cstar:cstar+1, :])
 		else:
-			Philist[t] = Philist[pstar]*X[cstar:cstar+1,:]
-			philist[t] = philist[pstar]*x[cstar:cstar+1,:]	
+			Philist[t] = Philist[pstar]*X[cstar:cstar+1, :]
+			philist[t] = philist[pstar]*x[cstar:cstar+1, :]	
 		Phi = Philist[t]*2.-1.; phi = philist[t]*2.-1.
 
 		# calculate optimal value of alpha (scalar)
@@ -114,15 +120,15 @@ def adaboostMH(X,Y,x,y,f,model='stump'):
 		plen += 1; dlen += 1
 
 		# Calculate train and test predictions and errors
-		train_pred = np.zeros((K,N),dtype='float32')
-		test_pred = np.zeros((K,n),dtype='float32')
+		train_pred = np.zeros((K, N), dtype='float32')
+		test_pred = np.zeros((K, n), dtype='float32')
 		for idx in range(plen):
 			train_pred = train_pred + Tpredlist[idx][1]*Tpredlist[idx][2]
 			test_pred = test_pred + tpredlist[idx][1]*tpredlist[idx][2]
 
-		Tpred[:,t+1] = np.argmax(train_pred,0)
-		tpred[:,t+1] = np.argmax(test_pred,0)
-		trainerr, testerr = compute_error(train_pred,test_pred,Y,y)
+		Tpred[:, t+1] = np.argmax(train_pred, 0)
+		tpred[:, t+1] = np.argmax(test_pred, 0)
+		trainerr, testerr = compute_error(train_pred, test_pred, Y, y)
 
 		# Update example weights
 		wnew = w*np.exp(-a*Hweakrule*Y)
@@ -133,9 +139,19 @@ def adaboostMH(X,Y,x,y,f,model='stump'):
 
 		# output data
 		owrite = open(onfname,'a')
-		owrite.write(str(t)+'\t'+str(a)+'\t'+str(astar)+'\t'+str(mostansqs[cstar])+'\t'+str((train_pred*Y).sum()/float(K*N))+'\t'+str(trainerr)+'\t'+str((test_pred*y).sum()/float(K*n))+'\t'+str(testerr)+'\t'+str(duration)+'\n')
+		to_write = [
+		    t,
+		    a,
+		    astar, mostansqs[cstar],
+		    (train_pred*Y).sum()/float(K*N),
+		    trainerr, 
+		    (test_pred*y).sum()/float(K*n), 
+		    testerr,
+		    duration
+		]
+		owrite.write('\t'.join([str(s) for s in to_write]))
 		owrite.close()
-		print t, a, astar, mostansqs[cstar], (train_pred*Y).sum()/float(K*N), trainerr, (test_pred*y).sum()/float(K*n), testerr, duration
+		print to_write
 	
 	# output decision tree
 	twrite = open(tnfname,'a')
