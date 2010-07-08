@@ -3,14 +3,20 @@ import itertools
 import timeit
 
 def form_all_kmers(A,k):
+    """
+    A : list
+        alphabet - all possible characters
+    k : int
+        the length of subsequences you're after
+    """
     all_kmers = itertools.product(A,repeat=k)
     return np.array([beta for beta in all_kmers])
 
 def gen_features(x,m,beta):
     """
-    x : 
+    x : list
         protein sequence
-    m : 
+    m : int
         number of mismatches
     beta : array
         all possible kmers
