@@ -4,6 +4,20 @@ import time
 import pdb
 
 def adaboostMH(X,Y,x,y,f,model='stump'):
+    """
+    X : DxN array 
+        
+    Y : Kx? array
+        
+    x : ? x n array
+        
+    y : ? x n array
+        
+    f : 
+        
+    model : string
+        
+    """
 	(D,N) = X.shape
 	K = Y.shape[0]
 	n = x.shape[1]
@@ -32,15 +46,18 @@ def adaboostMH(X,Y,x,y,f,model='stump'):
 	# root decision function always gives true.
 	Wmatch = (w*(Y>0)).sum(1)
 	Wmismatch = (w*(Y<0)).sum(1)
-	v = (Wmatch-Wmismatch>0)*2.-1.; v = v.reshape(K,1)
+	v = (Wmatch-Wmismatch>0)*2.-1.
+	v = v.reshape(K,1)
 	# gamma = 'edge' of the weak rule
 	gamma = (w*Y*v).sum()
 	# a = coefficient of weak rule
 	a = 0.5*np.log((1+gamma)/(1-gamma))
 
 	# update decision tree and prediction list.
-	Philist = dict(); Philist[-1] = np.ones((1, N), dtype='float32')
-	philist = dict(); philist[-1] = np.ones((1, n), dtype='float32')
+	Philist = dict()
+	Philist[-1] = np.ones((1, N), dtype='float32')
+	philist = dict()
+	philist[-1] = np.ones((1, n), dtype='float32')
 	Hweakrule = v*Philist[-1]
 	hweakrule = v*philist[-1]
 	Tpredlist = [[1, a, Hweakrule, 0]]
@@ -85,7 +102,8 @@ def adaboostMH(X,Y,x,y,f,model='stump'):
 	for t in range(T):
 		starttime = time.time()
 
-		# choose the appropriate (leaf+weak rule) for the next prediction function
+		# choose the appropriate (leaf+weak rule) for the next prediction 
+		# function
 		pstar, cstar, astar = get_weak_rule(X, Y, Philist, w, model)
 		if astar:	# negations
 			Philist[t] = Philist[pstar]*(1-X[cstar:cstar+1, :])
@@ -98,7 +116,8 @@ def adaboostMH(X,Y,x,y,f,model='stump'):
 		# calculate optimal value of alpha (scalar)
 		Wmatch = (w*(Phi*Y>0)).sum(1)
 		Wmismatch = (w*(Phi*Y<0)).sum(1)
-		vstar = (Wmatch-Wmismatch>0)*2.-1.; vstar = vstar.reshape(K,1)
+		vstar = (Wmatch-Wmismatch>0)*2.-1.
+		vstar = vstar.reshape(K,1)
 		gamma = (w*Y*vstar*Phi).sum()
 		a = 0.5*np.log((1+gamma)/(1-gamma))
 
@@ -166,6 +185,15 @@ def adaboostMH(X,Y,x,y,f,model='stump'):
 	dwrite.close()
 
 def compute_error(train_pred,test_pred,Y,y):
+    """
+    train_pred : 
+    
+    test_pred : 
+    
+    Y : KxN array
+    
+    y : ? x n
+    """
 	(K,N) = Y.shape
 	n = y.shape[1]
 	K = float(K)
@@ -193,6 +221,19 @@ def compute_error(train_pred,test_pred,Y,y):
 	return trainerr, testerr
 
 def get_weak_rule(X,Y,Phidict,w,m):
+    """
+    X : DxN array
+    
+    Y : Kx? array
+    
+    Phidict : dict
+    
+    w : 
+    
+    m : string
+        can be "tree" or "stump"
+    """
+    
 	# This is going to be extremely slow for large
 	# number of features. Need to rewrite in 
 	# weave for major speed-up.
