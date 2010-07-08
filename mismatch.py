@@ -18,7 +18,6 @@ def gen_features(x,m,beta):
     k = len(beta[0])
     all_kmers_in_x = [x[i:i+k] for i in range(len(x)-2)]
     alpha = np.array([list(a) for a in all_kmers_in_x])
-    
     # form features
     n1 = alpha.shape[0]
     n2 = beta.shape[0]
