@@ -13,14 +13,13 @@ def gen_features(x,m,beta):
     m : 
         number of mismatches
     beta : array
-        all possibly kmers
+        all possible kmers
     """
     k = len(beta[0])
-    all_kmers_in_x = [x[i:i+k] for i in range(len(x)-2)]
+    all_kmers_in_x = [x[i:i+k] for i in range(len(x)) if len(x[i:i+k])==k]
     alpha = np.array([list(a) for a in all_kmers_in_x])
     # form features
-    n1 = alpha.shape[0]
-    n2 = beta.shape[0]
+    n1,n2 = alpha.shape[0], beta.shape[0]
     mismatches = np.repeat(alpha, n2, 0) != np.tile(beta, (n1,1))
     tested = np.sum(mismatches,1) <= m
     tested_reshaped = np.reshape(tested,(n2,n1))
