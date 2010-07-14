@@ -5,15 +5,15 @@ import pdb
 
 def adaboostMH(X,Y,x,y,f,model='stump'):
     """
-    X : DxN array 
+    X : DxN array (Train data) 
         
-    Y : Kx? array
+    Y : KxN array (Train labels)
         
-    x : ? x n array
+    x : Dxn array (Test data)
         
-    y : ? x n array
+    y : Kxn array (Test labels)
         
-    f : 
+    f : integer (fold index)
         
     model : string
         
@@ -25,25 +25,37 @@ def adaboostMH(X,Y,x,y,f,model='stump'):
 	# Number of boosting rounds
 	T = 100
 
-	# creating output files
+	"""
+	creating output files
+	onfname - test/train errors and the selected feature 
+	 		at each round is output in this file
+	tnfname - the decision tree after T rounds of boosting
+			is output in this file
+	dfname - a general dump of the test/train predictions 
+		for all T rounds is output in this file
+	"""	
 	filedir = './Adaboost/'
 	filetag = model+'_'+str(f)
 	onfname = filedir+'error'+filetag+'.txt'
-	tnfname = filedir+'decision'+filetag+'.txt'
-	dfname = filedir+'dump'+filetag+'.dump'
+	tnfname = filedir+'decision'+filetag+'.pkl'
+	dfname = filedir+'dump'+filetag+'.pkl'
 	
-	# Initial weight over examples - Uniform
+	# Initializing weight over examples - Uniform distribution
 	w = np.ones(Y.shape, dtype='float32')/(N*K)
-    # w = (1+Y)/(4*N) + (1-Y)/(4*N*(K-1))
+#	w = (1+Y)/(4*N) + (1-Y)/(4*N*(K-1))
 
-	# Initialize decision tree, prediction list objects
-	Tpredlist = []; tpredlist = []; dectree = []
+	
+	#Data structures to store output from boosting at each round. 
+	#dectree - a list of all nodes (and their attributes) in the decision tree
+	#Tpred/tpred - stores the output of the decision tree at each round (train/test samples)
+	Phidict = dict(); phidict = dict()
+	dectree = dict(); order = []
 	Tpred = np.zeros((N,T+1), dtype='float32')
 	tpred = np.zeros((n,T+1), dtype='float32')
 
 	starttime = time.time()
 	# root decision function/prediction node.
-	# root decision function always gives true.
+	# root decision function always outputs 1.
 	Wmatch = (w*(Y>0)).sum(1)
 	Wmismatch = (w*(Y<0)).sum(1)
 	v = (Wmatch-Wmismatch>0)*2.-1.
@@ -54,41 +66,43 @@ def adaboostMH(X,Y,x,y,f,model='stump'):
 	a = 0.5*np.log((1+gamma)/(1-gamma))
 
 	# update decision tree and prediction list.
-	Philist = dict()
-	Philist[-1] = np.ones((1, N), dtype='float32')
-	philist = dict()
-	philist[-1] = np.ones((1, n), dtype='float32')
-	Hweakrule = v*Philist[-1]
-	hweakrule = v*philist[-1]
-	Tpredlist = [[1, a, Hweakrule, 0]]
-	tpredlist = [[1, a, hweakrule, 0]]
-	dectree = [[1, [a, []], -1]]
-	dlen = 1; plen = 1; clen = D
+	Phi = np.ones((1,N), dtype='float32')
+	phi = np.ones((1,n), dtype='float32')
+	Hweakrule = v*Phi
+	hweakrule = v*phi
+	# Phidict keys = feature ids
+	# Phidict values = [\phi(x), feature wt, >/< decision, weak rule's output]
+	Phidict[-1] = [[Phi,a,Hweakrule]]
+	phidict[-1] = [[phi,a,hweakrule]]
+	dectree[-1] = [-1,[a,[],v]]
 
-	# training and test error
-	train_pred = np.zeros((K, N), dtype='float32')
-	test_pred = np.zeros((K, n), dtype='float32')
-	for idx in range(plen):
-		train_pred = train_pred + Tpredlist[idx][1]*Tpredlist[idx][2]
-		test_pred = test_pred + tpredlist[idx][1]*tpredlist[idx][2]
+	# compute the prediction output by the decision
+	# tree for all train/test samples
+	train_pred = np.zeros((K,N), dtype='float32')
+	test_pred = np.zeros((K,n), dtype='float32')
+	for kidx in Phidict.keys():
+		for aidx in range(len(Phidict[kidx])):
+			train_pred = train_pred + Phidict[kidx][aidx][2]*Phidict[kidx][aidx][3]
+			test_pred = test_pred + phidict[kidx][aidx][2]*phidict[kidx][aidx][3]
 
+	# save the class label for train/test samples
 	Tpred[:, 0] = np.argmax(train_pred, 0)
 	tpred[:, 0] = np.argmax(test_pred, 0)
-	trainerr, testerr = compute_error(train_pred, test_pred, Y, y)
+	# compute classification error at round 0
+	# roc_auc breaks when function output is the
+	# same for all samples/classes.
+	trainerr0, testerr0 = classification_error(train_pred,test_pred,Y,y)
 	duration = time.time() - starttime
     
 	# write output to file
-	owrite = open(onfname,'a')
-	to_write = [
-	    -1, 
-	    a, 
+	owrite = open(onfname,'w')
+	to_write = [-1, a, 
 	    (train_pred*Y).sum()/float(K*N), 
-	    trainerr, 
+	    trainerr0, 
 	    (test_pred*y).sum()/float(K*n), 
-	    testerr, 
-	    duration
-	]
-	owrite.write('\t'.join([str(s) for s in to_write]))
+	    testerr0, 
+	    duration]
+	owrite.write('\t'.join(map(str,to_write))+'\n')
 	owrite.close()
 	print to_write
 	# update weights
@@ -102,98 +116,160 @@ def adaboostMH(X,Y,x,y,f,model='stump'):
 	for t in range(T):
 		starttime = time.time()
 
-		# choose the appropriate (leaf+weak rule) for the next prediction 
-		# function
-		pstar, cstar, astar = get_weak_rule(X, Y, Philist, w, model)
-		if astar:	# negations
-			Philist[t] = Philist[pstar]*(1-X[cstar:cstar+1, :])
-			philist[t] = philist[pstar]*(1-x[cstar:cstar+1, :])
-		else:
-			Philist[t] = Philist[pstar]*X[cstar:cstar+1, :]
-			philist[t] = philist[pstar]*x[cstar:cstar+1, :]	
-		Phi = Philist[t]*2.-1.; phi = philist[t]*2.-1.
+		# choose the appropriate (leaf+weak rule) for the next prediction function
+		pstar, cstar, pastar, castar, cvalue = get_weak_rule(X, Y, Philist, w, model)
+		PX = (X[cstar:cstar+1, :] < cvalue)*1.
+		px = (x[cstar:cstar+1, :] < cvalue)*1.
+		order.append(cstar)
 
-		# calculate optimal value of alpha (scalar)
-		Wmatch = (w*(Phi*Y>0)).sum(1)
-		Wmismatch = (w*(Phi*Y<0)).sum(1)
-		vstar = (Wmatch-Wmismatch>0)*2.-1.
-		vstar = vstar.reshape(K,1)
-		gamma = (w*Y*vstar*Phi).sum()
-		a = 0.5*np.log((1+gamma)/(1-gamma))
+		# Updating Tree and prediction dictionary
+		Phidict[cstar] = []; phidict[cstar] = []
+		# FIXME: need to replace with actual k-mer
+		dectree[cstar] = [cstar]
+		dectree[pstar][pastar+1][1].append(cstar)
+		Hweakrule = np.zeros((K,N),dtype='float')
+		hweakrule = np.zeros((K,n),dtype='float')
+		ans = [0,1]
 
-		# output of new prediction rule
-		Hweakrule = vstar*Phi
-		hweakrule = vstar*phi
+		for aidx in ans:
+			# compute output of decision function
+			Phi = Phidict[pstar][pastar][0]*(aidx+((-1)**aidx)*PX)
+			phi = phidict[pstar][pastar][0]*(aidx+((-1)**aidx)*px)
+			# calculate optimal value of alpha for that decision
+			Wmatch = (w*(Phi*Y<0)).sum(1)
+			Wmismatch = (w*(Phi*Y<0)).sum(1)
+			vstar = (Wmatch-Wmismatch>0)*2.-1.
+			vstar = vstar.reshape(K,1)
+			gamma = (w*Y*vstar*Phi).sum()
+			a = 0.5*np.log((1+gamma)/(1-gamma))
 
-		# Updating Tree and prediction list
-		if astar:	# negations
-			Tpredlist.append([astar,a,Hweakrule,dlen])
-			tpredlist.append([astar,a,hweakrule,dlen])
-			dectree.append([astar,[a,[]],cstar])
-		else:
-			Tpredlist.append([0,a,Hweakrule,dlen])
-			tpredlist.append([0,a,hweakrule,dlen])
-			dectree.append([0,[a,[]],cstar])	
-		dec = Tpredlist[pstar][3]
-		dectree[dec][1][1].append(dlen)
-		plen += 1; dlen += 1
+			# compute f(x) = \alpha * \phi(x) * v for each decision node
+			Hweakrule += a*vstar*Phi
+			hweakrule += a*vstar*phi
 
-		# Calculate train and test predictions and errors
-		train_pred = np.zeros((K, N), dtype='float32')
-		test_pred = np.zeros((K, n), dtype='float32')
-		for idx in range(plen):
-			train_pred = train_pred + Tpredlist[idx][1]*Tpredlist[idx][2]
-			test_pred = test_pred + tpredlist[idx][1]*tpredlist[idx][2]
-
-		Tpred[:, t+1] = np.argmax(train_pred, 0)
-		tpred[:, t+1] = np.argmax(test_pred, 0)
-		trainerr, testerr = compute_error(train_pred, test_pred, Y, y)
-
+			# Update Tree and prediction dictionary
+			Phidict[cstar].append([Phi,a,vstar*Phi])
+			phidict[cstar].append([phi,a,vstar*phi])
+			dectree[cstar].append([a,[],vstar])
+		
 		# Update example weights
-		wnew = w*np.exp(-a*Hweakrule*Y)
+		wnew = w*np.exp(-Hweakrule*Y)
 		wnew = wnew/wnew.sum()
 		Wt.append(wnew)
 		w = wnew
+
+		# Calculate train and test predictions and errors
+		train_pred = np.zeros((K,N), dtype='float32')
+		test_pred = np.zeros((K,n), dtype='float32')
+		for kidx in Phidict.keys():
+			for aidx in range(len(Phidict[kidx])):
+				train_pred = train_pred + Phidict[kidx][aidx][2]*Phidict[kidx][aidx][3]
+				test_pred = test_pred + phidict[kidx][aidx][2]*phidict[kidx][aidx][3]
+
+		Tpred[:, t+1] = np.argmax(train_pred, 0)
+		tpred[:, t+1] = np.argmax(test_pred, 0)
+		trainerr, testerr = roc_auc(train_pred, test_pred, Y, y)
 		duration = time.time() - starttime
 
 		# output data
 		owrite = open(onfname,'a')
-		to_write = [
-		    t,
-		    a,
-		    astar, mostansqs[cstar],
+		to_write = [t, a, cstar,
 		    (train_pred*Y).sum()/float(K*N),
 		    trainerr, 
 		    (test_pred*y).sum()/float(K*n), 
 		    testerr,
-		    duration
-		]
-		owrite.write('\t'.join([str(s) for s in to_write]))
+		    duration]
+		owrite.write('\t'.join(map(str,to_write))+'\n')
 		owrite.close()
 		print to_write
 	
 	# output decision tree
-	twrite = open(tnfname,'a')
-	for l in range(len(dectree)):
-		twrite.write(str(dectree[l])+'\n')
+	twrite = open(tnfname,'w')
+	cPickle.Pickler(twrite,protocol=2).dump(dectree)
+	cPickle.Pickler(twrite,protocol=2).dump(order)
 	twrite.close()
 
 	# dump predictions for more analysis
-	dwrite = open(dfname,'a')
+	dwrite = open(dfname,'w')
 	cPickle.Pickler(dwrite,protocol=2).dump(Tpred)
 	cPickle.Pickler(dwrite,protocol=2).dump(tpred)
 	dwrite.close()
 
-def compute_error(train_pred,test_pred,Y,y):
+def roc_auc(train_pred,test_pred,Y,y,threshold='None'):
+	"""
+	Computes the ROC curve and the area
+	under that curve, as a measure of classification
+	accuracy. If a threshold is specified, the
+	(precision,recall) for the given threshold is returned.
+	"""
+	
+	if threshold=='None':
+		values = np.sort(np.unique(train_pred.ravel()))
+		indices = np.arange(1,values.size-2,2)
+		Thresholds = list(values[indices])
+		Thresholds.extend([values[1],values[-2]])
+		Thresholds.sort(reverse=True)
+		
+		values = np.sort(np.unique(test_pred.ravel()))
+		indices = np.arange(1,values.size-2,2)
+		thresholds = list(values[indices])
+		thresholds.extend([values[1],values[-2]])
+		thresholds.sort(reverse=True)
+	else:
+		Thresholds = [threshold]
+		thresholds = [threshold]
+
+	TPR = np.zeros((len(Thresholds)+2,2),dtype='float')
+	tPR = np.zeros((len(thresholds)+2,2),dtype='float')
+	TPR[0,:] = np.array([0,0]); TPR[-1,:] = np.array([1,1])
+	tPR[0,:] = np.array([0,0]); tPR[-1,:] = np.array([1,1])
+
+	for tidx in range(len(Thresholds)):
+		P = (train_pred>Thresholds[tidx])
+		true_positive = (P*Y==1).sum()
+		real_positive = 0.5*(1+Y).sum()
+
+		# precision-recall
+#		pred_positive = np.float(P.sum())
+#		TPR[tidx,:] = np.array([true_positive/pred_positive,true_positive/real_positive])
+
+		# roc
+		false_positive = (P*Y==-1).sum()
+		real_negative = 0.5*(1-Y).sum()
+		TPR[tidx+1,:] = np.array([false_positive/real_negative, true_positive/real_positive])
+
+	for tidx in range(len(thresholds)):
+		P = (train_pred>thresholds[tidx])
+		true_positive = (P*y==1).sum()
+		real_positive = 0.5*(1+y).sum()
+
+		# precision-recall
+#		pred_positive = np.float(P.sum())
+#		tPR[tidx,:] = np.array([true_positive/pred_positive,true_positive/real_positive])
+
+		# roc
+		false_positive = (P*y==-1).sum()
+		real_negative = 0.5*(1-y).sum()
+		tPR[tidx+1,:] = np.array([false_positive/real_negative, true_positive/real_positive])
+
+	# compute area under the curve using trapezoidal methods
+	arTPR = np.trapz(TPR[:,1],TPR[:,0])
+	artPR = np.trapz(tPR[:,1],tPR[:,0])
+
+	return arTPR, artPR
+
+
+def classification_error(train_pred,test_pred,Y,y):
     """
-    train_pred : 
+    train_pred : KxN array (real-valued predictions)
     
-    test_pred : 
+    test_pred : Kxn array (real-valued predictions)
     
-    Y : KxN array
+    Y : KxN array ({1,-1})
     
-    y : ? x n
+    y : Kxn ({1,-1})
     """
+
 	(K,N) = Y.shape
 	n = y.shape[1]
 	K = float(K)
@@ -224,11 +300,11 @@ def get_weak_rule(X,Y,Phidict,w,m):
     """
     X : DxN array
     
-    Y : Kx? array
+    Y : KxN array
     
-    Phidict : dict
+    Phidict : dict (output of weak-rules at each node of the tree)
     
-    w : 
+    w : KxN array (weights over examples that sum to 1)
     
     m : string
         can be "tree" or "stump"
