@@ -6,16 +6,39 @@ import csv
 
 
 class Protein():
+    """
+    Class describing a protein in terms of its amino acid sequence
+    """
     def __init__(self,name):
+        """
+        name : string
+            name of the protein
+        """
         print "\tinitialised %s"%name
         self.name = name
         self.lines = []
         self.label = None
     
     def add_line(self,line):
+        """
+        this adds a line of symbols to the (temporary) lines variable
+        
+        line : string
+            a line of protein symbols from a fasta file
+        """
         self.lines.append(line)
         
     def finish(self,m,beta):
+        """
+        this finishes off the parsing of a single protein from a fasta file.
+        It also generates the feature set - the count of each possible kmer in
+        the protein that are within m mismatches.
+        
+        m : int
+            number of mismatches allowed
+        beta : list
+            all possible kmers
+        """
         print "\tfinishing %s"%self.name
         self.data = "".join(self.lines)
         self.feature = gen_features(self.data,m,beta)
@@ -24,7 +47,27 @@ class Protein():
         return self.name + "\n" + self.data
 
 class Virus():
+    """
+    class describing a virus as a collection of proteins
+    """
     def __init__(self,name,virus_id,m,beta):
+        """
+        Arguments
+        ---------
+        name : string
+            name of the virus
+        virus_id : string
+            unique id of the virus
+        m : int
+            number of allowed mismatches
+        beta : list
+            all possible kmers
+        
+        Notes
+        -----
+        The arguments m and beta are for generating features. See 
+        protein.finish() for more info.
+        """
         print "initialised %s with id %s"%(name,virus_id)
         self.name = name
         self.id = virus_id
@@ -34,6 +77,10 @@ class Virus():
         self.beta = beta
         
     def add_line(self,line):
+        """
+        adds a line from a fasta file to the virus definition. This either
+        starts a new protein or adds a line to the current protein.
+        """
         if ">" in line:
             if len(self.proteins):
                 self.proteins[-1].finish(self.m,self.beta)
@@ -51,6 +98,9 @@ class Virus():
         return self.name
 
 class Picorna():
+    """
+    class describing a set of picorna viruses
+    """
     def __init__(self,k,m):
         """
         k : int
@@ -73,6 +123,11 @@ class Picorna():
     
     def parse(self,filename='picornavirus-proteins.fasta',max_v=None):
         """
+        This method parses a fasta file, populating the objects as it goes.
+        
+        Arguments
+        ---------
+        
         filename : string
             filename of a multi-virus, multi-protein fasta file
         max_v : int
@@ -97,11 +152,21 @@ class Picorna():
         self.assign_classes()
     
     def finish_last_protein(self):
+        """
+        this is called at the very end of the parsing to finish off the last
+        protein.
+        """
         if len(self.viruses):
             if len(self.viruses[-1].proteins):
                 self.viruses[-1].proteins[-1].finish(self.m,self.beta)
     
     def assign_classes(self,classfile="classes.csv"):
+        """
+        This class reads the classfile which contains the ids, names and class
+        labels, and associates the appropriate label with each virus and
+        protein stored in the Picorna object.
+        """
+        
         for row in csv.reader(open(classfile,'r'), delimiter=','):
             try:
                 name, cls = row
@@ -131,16 +196,26 @@ class Picorna():
         raise LookupError(id)
     
     def summarise(self):
-        # X : a DxN matrix (where D = number of kmers, N = number of proteins and 
-        # the matrix elements are the kmer counts)
+        """
+        This method collects together all the feature and class label 
+        information in the Picorna object and creates a data matrix and a 
+        class matrix
+        
+        Returns
+        -------
+        X : DxN array
+            where D = number of kmers, N = number of proteins and the array 
+            elements are the kmer counts
+        Y : KxN array
+            where K = number of classes and Yij = 1 if the jth protein belongs
+            to the ith class, otherwise Yij = -1)
+        """
         feature_list = []
         for virus in self:
             for protein in virus:
                 feature_list.append(protein.feature)
         X = np.vstack(feature_list).T
-    
-        # Y : a KxN matrix (where K = number of classes and Yij = 1 if
-        # the jth protein belongs to the ith class, otherwise Yij = -1)
+        
         Y = np.empty((len(self.label_dict), X.shape[1]))
         for i in range(Y.shape[0]):
             j = 0
