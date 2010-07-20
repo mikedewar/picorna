@@ -3,21 +3,20 @@ import cPickle
 import time
 import pdb
 
+EPS = np.finfo(np.double).tiny
+
 def adaboostMH(X,Y,x,y,f,model='stump'):
-    """
-    X : DxN array (Train data) 
-        
-    Y : KxN array (Train labels)
-        
-    x : Dxn array (Test data)
-        
-    y : Kxn array (Test labels)
-        
-    f : integer (fold index)
-        
-    model : string
-        can be "tree" or "stump"
-    """
+	"""
+	Input:
+		X : DxN array (Train data) 
+		Y : KxN array (Train labels)
+		x : Dxn array (Test data)
+		y : Kxn array (Test labels)
+		f : integer (fold index)
+		model : string
+			can be "tree" or "stump"
+	"""
+
 	(D,N) = X.shape
 	K = Y.shape[0]
 	n = x.shape[1]
@@ -81,8 +80,8 @@ def adaboostMH(X,Y,x,y,f,model='stump'):
 	test_pred = np.zeros((K,n), dtype='float32')
 	for kidx in Phidict.keys():
 		for aidx in range(len(Phidict[kidx])):
-			train_pred = train_pred + Phidict[kidx][aidx][2]*Phidict[kidx][aidx][3]
-			test_pred = test_pred + phidict[kidx][aidx][2]*phidict[kidx][aidx][3]
+			train_pred = train_pred + Phidict[kidx][aidx][1]*Phidict[kidx][aidx][2]
+			test_pred = test_pred + phidict[kidx][aidx][1]*phidict[kidx][aidx][2]
 
 	# save the class label for train/test samples
 	Tpred[:, :, 0] = train_pred
@@ -109,7 +108,7 @@ def adaboostMH(X,Y,x,y,f,model='stump'):
 		starttime = time.time()
 
 		# choose the appropriate (leaf+weak rule) for the next prediction function
-		pstar, cstar, pastar, castar, cvalue = get_weak_rule(X, Y, Philist, w, model)
+		pstar, cstar, pastar, castar, cvalue = get_weak_rule(X, Y, Phidict, w, model)
 		PX = (X[cstar:cstar+1, :] < cvalue)*1.
 		px = (x[cstar:cstar+1, :] < cvalue)*1.
 		order.append(cstar)
@@ -128,7 +127,7 @@ def adaboostMH(X,Y,x,y,f,model='stump'):
 			Phi = Phidict[pstar][pastar][0]*(aidx+((-1)**aidx)*PX)
 			phi = phidict[pstar][pastar][0]*(aidx+((-1)**aidx)*px)
 			# calculate optimal value of alpha for that decision
-			Wmatch = (w*(Phi*Y<0)).sum(1)
+			Wmatch = (w*(Phi*Y>0)).sum(1)
 			Wmismatch = (w*(Phi*Y<0)).sum(1)
 			vstar = (Wmatch-Wmismatch>0)*2.-1.
 			vstar = vstar.reshape(K,1)
@@ -155,8 +154,8 @@ def adaboostMH(X,Y,x,y,f,model='stump'):
 		test_pred = np.zeros((K,n), dtype='float32')
 		for kidx in Phidict.keys():
 			for aidx in range(len(Phidict[kidx])):
-				train_pred = train_pred + Phidict[kidx][aidx][2]*Phidict[kidx][aidx][3]
-				test_pred = test_pred + phidict[kidx][aidx][2]*phidict[kidx][aidx][3]
+				train_pred = train_pred + Phidict[kidx][aidx][1]*Phidict[kidx][aidx][2]
+				test_pred = test_pred + phidict[kidx][aidx][1]*phidict[kidx][aidx][2]
 
 		Tpred[:, :, t+1] = train_pred
 		tpred[:, :, t+1] = test_pred
@@ -229,16 +228,16 @@ def roc_auc(train_pred,test_pred,Y,y,threshold='None'):
 		TPR[tidx+1,:] = np.array([false_positive/real_negative, true_positive/real_positive])
 
 	for tidx in range(len(thresholds)):
-		P = (train_pred>thresholds[tidx])
-		true_positive = (P*y==1).sum()
+		p = (test_pred>thresholds[tidx])
+		true_positive = (p*y==1).sum()
 		real_positive = 0.5*(1+y).sum()
 
 		# precision-recall
-#		pred_positive = np.float(P.sum())
+#		pred_positive = np.float(p.sum())
 #		tPR[tidx,:] = np.array([true_positive/pred_positive,true_positive/real_positive])
 
 		# roc
-		false_positive = (P*y==-1).sum()
+		false_positive = (p*y==-1).sum()
 		real_negative = 0.5*(1-y).sum()
 		tPR[tidx+1,:] = np.array([false_positive/real_negative, true_positive/real_positive])
 
@@ -253,19 +252,16 @@ def roc_auc(train_pred,test_pred,Y,y,threshold='None'):
 
 
 def classification_error(train_pred, test_pred, Y, y, thresh):
-    """
-    P(correct class | predicted classes)
-    
-    train_pred : KxN array (real-valued predictions)
-    
-    test_pred : Kxn array (real-valued predictions)
-    
-    Y : KxN array ({1,-1})
-    
-    y : Kxn ({1,-1})
+	"""
+	P(correct class | predicted classes)
 
-    thresh : float (cut-off for real-valued predictions)
-    """
+	Input:
+		train_pred : KxN array (real-valued predictions)
+		test_pred : Kxn array (real-valued predictions)
+		Y : KxN array ({1,-1})
+		y : Kxn ({1,-1})
+		thresh : float (cut-off for real-valued predictions)
+	"""
 
 	(K,N) = Y.shape
 	n = y.shape[1]
@@ -283,18 +279,15 @@ def classification_error(train_pred, test_pred, Y, y, thresh):
 
 
 def get_weak_rule(X,Y,Phidict,w,m):
-    """
-    X : DxN array
-    
-    Y : KxN array
-    
-    Phidict : dict (output of weak-rules at each node of the tree)
-    
-    w : KxN array (weights over examples that sum to 1)
-    
-    m : string
-        can be "tree" or "stump"
-    """
+	"""
+	Input:
+		X : DxN array
+		Y : KxN array
+		Phidict : dict (output of weak-rules at each node of the tree)
+		w : KxN array (weights over examples that sum to 1)
+		m : string
+			can be "tree" or "stump"
+	"""
     
 	# This is going to be extremely slow for large
 	# number of features. Need to rewrite in 
@@ -303,7 +296,6 @@ def get_weak_rule(X,Y,Phidict,w,m):
 
 	(D,N) = X.shape
 	K = Y.shape[0]
-	pdec = [0,1]
 
 	if m=='tree':
 		pkeys = Phidict.keys()
@@ -312,9 +304,10 @@ def get_weak_rule(X,Y,Phidict,w,m):
 		Z = np.zeros((P,D,4),dtype='float32')
 		for p in range(P):
 			key = pkeys[p]
+			pdec = range(len(Phidict[key]))
 			for d in range(D):
 				thresholds = np.unique(X[d:d+1,:])
-				z = np.zeros((thresholds.size,4),dtype='float')
+				z = np.zeros((thresholds.size,2*len(pdec)),dtype='float')
 				for tidx in range(thresholds.size):
 					threshold = thresholds[tidx]
 
@@ -344,7 +337,7 @@ def get_weak_rule(X,Y,Phidict,w,m):
 
 		pstar, cstar = np.argwhere(Z[:,:,0]==Z[:,:,0].max())[0]
 		cvalue = int(Z[pstar,cstar,1])
-		pastar = int(Z[pstar,cstar,2)
+		pastar = int(Z[pstar,cstar,2])
 		castar = int(Z[pstar,cstar,3])
 		pstar = pkeys[pstar]
 
