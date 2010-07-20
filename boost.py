@@ -42,16 +42,15 @@ def adaboostMH(X,Y,x,y,f,model='stump'):
 	
 	# Initializing weight over examples - Uniform distribution
 	w = np.ones(Y.shape, dtype='float32')/(N*K)
-#	w = (1+Y)/(4*N) + (1-Y)/(4*N*(K-1))
-
 	
 	#Data structures to store output from boosting at each round. 
 	#dectree - a list of all nodes (and their attributes) in the decision tree
 	#Tpred/tpred - stores the output of the decision tree at each round (train/test samples)
 	Phidict = dict(); phidict = dict()
 	dectree = dict(); order = []
-	Tpred = np.zeros((N,T+1), dtype='float32')
-	tpred = np.zeros((n,T+1), dtype='float32')
+	Tpred = np.zeros((K,N,T+1), dtype='float32')
+	tpred = np.zeros((K,n,T+1), dtype='float32')
+	rocacc = np.zeros((T+1,5),dtype='float32')
 
 	starttime = time.time()
 	# root decision function/prediction node.
@@ -86,22 +85,15 @@ def adaboostMH(X,Y,x,y,f,model='stump'):
 			test_pred = test_pred + phidict[kidx][aidx][2]*phidict[kidx][aidx][3]
 
 	# save the class label for train/test samples
-	Tpred[:, 0] = np.argmax(train_pred, 0)
-	tpred[:, 0] = np.argmax(test_pred, 0)
+	Tpred[:, :, 0] = train_pred
+	tpred[:, :, 0] = test_pred
 	# compute classification error at round 0
-	# roc_auc breaks when function output is the
-	# same for all samples/classes.
-	trainerr0, testerr0 = classification_error(train_pred,test_pred,Y,y)
+	rocacc[0,1], rocacc[0,3] = classification_error(train_pred,test_pred,Y,y,0.)
 	duration = time.time() - starttime
     
 	# write output to file
 	owrite = open(onfname,'w')
-	to_write = [-1, a, 
-	    (train_pred*Y).sum()/float(K*N), 
-	    trainerr0, 
-	    (test_pred*y).sum()/float(K*n), 
-	    testerr0, 
-	    duration]
+	to_write = [-1, a, rocacc[0,1], rocacc[0,3], duration]
 	owrite.write('\t'.join(map(str,to_write))+'\n')
 	owrite.close()
 	print to_write
@@ -166,19 +158,16 @@ def adaboostMH(X,Y,x,y,f,model='stump'):
 				train_pred = train_pred + Phidict[kidx][aidx][2]*Phidict[kidx][aidx][3]
 				test_pred = test_pred + phidict[kidx][aidx][2]*phidict[kidx][aidx][3]
 
-		Tpred[:, t+1] = np.argmax(train_pred, 0)
-		tpred[:, t+1] = np.argmax(test_pred, 0)
-		trainerr, testerr = roc_auc(train_pred, test_pred, Y, y)
+		Tpred[:, :, t+1] = train_pred
+		tpred[:, :, t+1] = test_pred
+		rocacc[t+1,0], rocacc[t+1,2], rocacc[t+1,4] = roc_auc(train_pred, test_pred, Y, y)
+		rocacc[t+1,1], rocacc[t+1,3] = classification_error(train_pred, test_pred, Y, y, rocacc[t+1,4])
 		duration = time.time() - starttime
 
 		# output data
 		owrite = open(onfname,'a')
-		to_write = [t, a, cstar,
-		    (train_pred*Y).sum()/float(K*N),
-		    trainerr, 
-		    (test_pred*y).sum()/float(K*n), 
-		    testerr,
-		    duration]
+		to_write = [t, cstar, rocacc[t+1,0], rocacc[t+1,1],
+				rocacc[t+1,2], rocacc[t+1,3], duration]
 		owrite.write('\t'.join(map(str,to_write))+'\n')
 		owrite.close()
 		print to_write
@@ -193,6 +182,7 @@ def adaboostMH(X,Y,x,y,f,model='stump'):
 	dwrite = open(dfname,'w')
 	cPickle.Pickler(dwrite,protocol=2).dump(Tpred)
 	cPickle.Pickler(dwrite,protocol=2).dump(tpred)
+	cPickle.Pickler(dwrite,protocol=2).dump(rocacc)
 	dwrite.close()
 
 def roc_auc(train_pred,test_pred,Y,y,threshold='None'):
@@ -256,11 +246,16 @@ def roc_auc(train_pred,test_pred,Y,y,threshold='None'):
 	arTPR = np.trapz(TPR[:,1],TPR[:,0])
 	artPR = np.trapz(tPR[:,1],tPR[:,0])
 
-	return arTPR, artPR
+	# a simple way to pick a threshold on the roc curve
+	dist = np.abs(TPR[:,0]-TPR[:,1])
+
+	return arTPR, artPR, Thresholds[dist.argmax()]
 
 
-def classification_error(train_pred,test_pred,Y,y):
+def classification_error(train_pred, test_pred, Y, y, thresh):
     """
+    P(correct class | predicted classes)
+    
     train_pred : KxN array (real-valued predictions)
     
     test_pred : Kxn array (real-valued predictions)
@@ -268,33 +263,24 @@ def classification_error(train_pred,test_pred,Y,y):
     Y : KxN array ({1,-1})
     
     y : Kxn ({1,-1})
+
+    thresh : float (cut-off for real-valued predictions)
     """
 
 	(K,N) = Y.shape
 	n = y.shape[1]
 	K = float(K)
 
-	# naive sign-mismatch penalty
-	# too stringent
-	trainerr = (train_pred*Y<0).sum()/float(K*N)
-	testerr = (test_pred*y<0).sum()/float(K*n)
+	# train accuracy
+	P = (train_pred>thresh)*1.
+	trainacc = np.mean(((P*Y>0).sum(0))/(P.sum(0)+EPS))
+	
+	# test accuracy 	
+	p = (test_pred>thresh)*1.
+	testacc = np.mean(((p*y>0).sum(0))/(p.sum(0)+EPS))
 
-	# rewards not-in-class prediction less than
-	# in-class prediction
-#	T = (train_pred/np.max(train_pred,0).reshape(1,N)==1)*(K/(K-1))
-#	t = (test_pred/np.max(test_pred,0).reshape(1,n)==1)*(K/(K-1))
-#	T = T-1./(K-1); t = t-1./(K-1)
-#	trainerr = 1 - ((T*Y>0)*np.abs(T)).sum()/float(2*N)
-#	testerr = 1 - ((t*y>0)*np.abs(t)).sum()/float(2*n)
+	return trainacc, testacc
 
-	# rewards only in-class prediction
-#	T = (train_pred/np.max(train_pred,0).reshape(1,N)==1)
-#	t = (test_pred/np.max(test_pred,0).reshape(1,n)==1)
-#	T = (train_pred>0)*1; t = (test_pred>0)*1
-#	trainerr = (T*(0.5*(Y+1)*K-1.)/(K-1)).sum()/float(N)
-#	testerr = (t*(0.5*(y+1)*K-1.)/(K-1)).sum()/float(n)
-
-	return trainerr, testerr
 
 def get_weak_rule(X,Y,Phidict,w,m):
     """
