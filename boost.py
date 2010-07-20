@@ -317,37 +317,49 @@ def get_weak_rule(X,Y,Phidict,w,m):
 
 	(D,N) = X.shape
 	K = Y.shape[0]
+	pdec = [0,1]
 
 	if m=='tree':
 		pkeys = Phidict.keys()
 		pkeys.sort()
 		P = len(pkeys)
-		Z = np.zeros((P,D,2),dtype='float32')
+		Z = np.zeros((P,D,4),dtype='float32')
 		for p in range(P):
 			key = pkeys[p]
 			for d in range(D):
-				fi = (Phidict[key]*X[d:d+1,:])*2.-1.
-				Wp = (w*(fi*Y>0)).sum(1)
-				Wm = (w*(fi*Y<0)).sum(1)
-				vstar = (Wp-Wm>0)*2.-1.
-				vstar = vstar.reshape(K,1)
-				z0 = (w*Y*vstar*fi).sum()
+				thresholds = np.unique(X[d:d+1,:])
+				z = np.zeros((thresholds.size,4),dtype='float')
+				for tidx in range(thresholds.size):
+					threshold = thresholds[tidx]
 
-				# negation
-				fi = (Phidict[key]*(1-X[d:d+1,:]))*2.-1.
-				Wp = (w*(fi*Y>0)).sum(1)
-				Wm = (w*(fi*Y<0)).sum(1)
-				vstar = (Wp-Wm>0)*2.-1.
-				vstar = vstar.reshape(K,1)
-				z1 = (w*Y*vstar*fi).sum()
+					for pd in pdec:
+						# less-than decision
+						fi = Phidict[key][pd][0]*(X[d:d+1,:]<threshold)
+						Wp = (w*(fi*Y>0)).sum(1)
+						Wm = (w*(fi*Y<0)).sum(1)
+						vstar = (Wp-Wm>0)*2.-1.
+						vstar = vstar.reshape(K,1)
+						z[tidx,2*pd+0] = (w*Y*vstar*fi).sum()
+
+						# greater-than decision
+						fi = Phidict[key][pd][0]*(X[d:d+1,:]>=threshold)
+						Wp = (w*(fi*Y>0)).sum(1)
+						Wm = (w*(fi*Y<0)).sum(1)
+						vstar = (Wp-Wm>0)*2.-1.
+						vstar = vstar.reshape(K,1)
+						z[tidx,2*pd+1] = (w*Y*vstar*fi).sum()
 				
-				if z0>z1:
-					Z[p,d,0] = z0; Z[p,d,1] = 0
-				else:
-					Z[p,d,0] = z1; Z[p,d,1] = 1
+					Z[p,d,0] = z.max()
+					thresh, dec = np.argwhere(z==z.max())[0]
+					Z[p,d,1] = thresholds[int(thresh)]
+					Z[p,d,2] = int(dec)/2
+					Z[p,d,3] = int(dec)%2
+					
 
 		pstar, cstar = np.argwhere(Z[:,:,0]==Z[:,:,0].max())[0]
-		astar = int(Z[pstar,cstar,1])
+		cvalue = int(Z[pstar,cstar,1])
+		pastar = int(Z[pstar,cstar,2)
+		castar = int(Z[pstar,cstar,3])
 		pstar = pkeys[pstar]
 
 	elif m=='stump':
@@ -377,4 +389,4 @@ def get_weak_rule(X,Y,Phidict,w,m):
 		cstar = np.argmax(Z[:,0])
 		astar = int(Z[cstar,1])
 
-	return pstar, cstar, astar
+	return pstar, cstar, pastar, castar, cvalue
