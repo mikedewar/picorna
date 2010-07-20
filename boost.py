@@ -6,9 +6,9 @@ import pdb
 def adaboostMH(X,Y,x,y,f,model='stump'):
     """
     X : DxN array 
-        
-    Y : Kx? array
-        
+        binary data matrix
+    Y : KxN array
+        binary matrix of labels
     x : ? x n array
         
     y : ? x n array
@@ -16,7 +16,7 @@ def adaboostMH(X,Y,x,y,f,model='stump'):
     f : 
         
     model : string
-        
+        can be "tree" or "stump"
     """
 	(D,N) = X.shape
 	K = Y.shape[0]
@@ -37,7 +37,9 @@ def adaboostMH(X,Y,x,y,f,model='stump'):
     # w = (1+Y)/(4*N) + (1-Y)/(4*N*(K-1))
 
 	# Initialize decision tree, prediction list objects
-	Tpredlist = []; tpredlist = []; dectree = []
+	Tpredlist = []
+	tpredlist = []
+	dectree = []
 	Tpred = np.zeros((N,T+1), dtype='float32')
 	tpred = np.zeros((n,T+1), dtype='float32')
 
@@ -154,6 +156,7 @@ def adaboostMH(X,Y,x,y,f,model='stump'):
 		wnew = wnew/wnew.sum()
 		Wt.append(wnew)
 		w = wnew
+		# keep track of time
 		duration = time.time() - starttime
 
 		# output data
