@@ -16,7 +16,7 @@ def adaboostMH(X,Y,x,y,f,model='stump'):
     f : integer (fold index)
         
     model : string
-        
+        can be "tree" or "stump"
     """
 	(D,N) = X.shape
 	K = Y.shape[0]

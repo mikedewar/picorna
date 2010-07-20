@@ -53,21 +53,21 @@ NC_003445 Strawberry mottle virus RNA 1, 2
 NC_010415 Simian enterovirus SV6, 3
 NC_010413 Simian enterovirus SV43, 3
 NC_010412 Simian enterovirus SV19, 3
-NC_003792 Cycas necrotic stunt virus RNA 2
-NC_003791 Cycas necrotic stunt virus RNA 1
+NC_003792 Cycas necrotic stunt virus RNA 2, 2
+NC_003791 Cycas necrotic stunt virus RNA 1, 2
 NC_010988 Tomato marchitez virus RNA 2, 2
 NC_010987 Tomato marchitez virus RNA 1, 2
 NC_009891 Seal picornavirus type 1, 3
 NC_009758 Marine RNA virus JP-B, 3
 NC_009757 Marine RNA virus JP-A, 3
 NC_009530 Brevicoryne brassicae picorna-like virus, 1
-NC_009448 Saffold virus
+NC_009448 Saffold virus, 3
 NC_009032 Tomato torrado virus RNA2, 2
 NC_009013 Tomato torrado virus RNA1, 2
 NC_008715 Possum enterovirus W6, 3
 NC_008714 Possum enterovirus W1, 3
 NC_006964 Strawberry latent ringspot virus RNA1, 2
-NC_005281 Heterosigma akashiwo RNA virus SOG263
+NC_005281 Heterosigma akashiwo RNA virus SOG263, 2
 NC_005097 Tobacco ringspot virus RNA 1, 2
 NC_005096 Tobacco ringspot virus RNA 2, 2
 NC_004439 Tomato black ring virus RNA 1, 2
@@ -142,7 +142,7 @@ NC_003779 Plautia stali intestine virus, 1
 NC_010810 Human TMEV-like cardiovirus, 3
 NC_011349 Seneca valley virus, 3
 NC_007522 Schizochytrium single-stranded RNA virus, 2
-NC_006559 Solenopsis invicta virus 1
+NC_006559 Solenopsis invicta virus, 1
 NC_003785 Satsuma dwarf virus RNA 1, 2
 NC_003786 Satsuma dwarf virus RNA 2, 2
 NC_008029 Homalodisca coagulata virus-1, 1
