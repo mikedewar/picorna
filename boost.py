@@ -369,6 +369,7 @@ def py_get_weak_rule(X,Y,Phidict,w,m):
     
 	(D,N) = X.shape
 	K = Y.shape[0]
+	pdec = [0,1]
 
 	if m=='tree':
 		pkeys = Phidict.keys()

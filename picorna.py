@@ -208,7 +208,7 @@ class Picorna():
         -------
         X : DxN array
             where D = number of kmers, N = number of proteins and the array 
-            elements are the kmer counts
+            elements are the kmer counts within the mismatch value
         Y : KxN array
             where K = number of classes and Yij = 1 if the jth protein belongs
             to the ith class, otherwise Yij = -1)
