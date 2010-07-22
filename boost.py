@@ -3,6 +3,7 @@ import cPickle
 import time
 import pdb
 
+# machine epsilon
 EPS = np.finfo(np.double).tiny
 
 def adaboostMH(X,Y,x,y,f,model='stump'):
@@ -83,25 +84,27 @@ def adaboostMH(X,Y,x,y,f,model='stump'):
 			train_pred = train_pred + Phidict[kidx][aidx][1]*Phidict[kidx][aidx][2]
 			test_pred = test_pred + phidict[kidx][aidx][1]*phidict[kidx][aidx][2]
 
-	# save the class label for train/test samples
+	# store the real-valued prediction
 	Tpred[:, :, 0] = train_pred
 	tpred[:, :, 0] = test_pred
+
 	# compute classification error at round 0
 	rocacc[0,1], rocacc[0,3] = classification_error(train_pred,test_pred,Y,y,0.)
 	duration = time.time() - starttime
     
-	# write output to file
+	# write some output to file
+	# file format: boosting round, k-mer selected, 
+	# train roc, train error, test roc, test error, time elapsed
 	owrite = open(onfname,'w')
-	to_write = [-1, a, rocacc[0,1], rocacc[0,3], duration]
+	to_write = [-1, 'root', 'None', rocacc[0,1], 'None', rocacc[0,3], duration]
 	owrite.write('\t'.join(map(str,to_write))+'\n')
 	owrite.close()
 	print to_write
+
 	# update weights
-	Wt = []
 	wnew = w*np.exp(-a*Hweakrule*Y)
 	wnew = wnew/wnew.sum()
-	Wt.append(wnew)
-	w = wnew
+	w = wnew.copy()
 
 	# starting boosting rounds
 	for t in range(T):
@@ -278,7 +281,82 @@ def classification_error(train_pred, test_pred, Y, y, thresh):
 	return trainacc, testacc
 
 
-def get_weak_rule(X,Y,Phidict,w,m):
+def weave_get_weak_rule(X, Y, Phidict, w, m):
+	(D,N) = X.shape
+	K = Y.shape[0]
+	phimat = np.zeros((0,N),dtype='float')
+
+	code = 	"""
+		float Zm = 1000000.;
+		float Z = 0;
+		int pstar = -1;
+		int cstar = -1;
+		int pastar = -1;
+		int castar = -1;
+		int cvalue = -1;
+
+		for(int p=0;p<Nphimat[0];l++)
+		{
+			for(int d=0;d<NX[0];d++)
+			{
+				for(int cidx=0;cidx<NX[1];cidx++)
+				{
+					int c = X[d*NX[1]+cidx]
+				int r = inc[rc];
+				float Wp=0;
+float Wm=0;
+float Zml=0;
+float Zmg=0;
+float Wpg=0;
+float Wmg=0;
+for(int c=0;c<NXdx[1];c++)
+{
+int idx=Xdx[r*NXdx[1]+c];
+Wp = Wp + Twp[l*NTwp[1]+idx];
+Wm = Wm + Twm[l*NTwp[1]+idx];
+Zml = Wp*sqrt((Wm+eps)/(Wp+eps)) + Wm*sqrt((Wp+eps)/(Wm+eps)) - (Wp + Wm);
+Wpg = Swp[l] - Wp;
+Wmg = Swm[l] - Wm;
+Zmg = Wpg*sqrt((Wmg+eps)/(Wpg+eps)) + Wmg*sqrt((Wpg+eps)/(Wmg+eps)) - (Wpg + Wmg);
+                                        
+                                        if (Zml<=Zm)
+                                        {
+                                                adx = 0;
+                                                mpidx = l;
+                                                mcidx = r;
+                                                mcdx = c;
+                                                Zm = Zml;
+                                        }
+        
+                                        if (Zmg<=Zm)
+                                        {
+                                                adx = 1;
+                                                mpidx = l;
+                                                mcidx = r;
+                                                mcdx = c;
+                                                Zm = Zmg;
+					}
+                                }
+                        }
+                }
+                results[0] = Zm;
+                results[1] = mpidx;
+                results[2] = mcidx;
+                results[3] = mcdx;
+                results[4] = adx;
+		"""
+
+	if m=='tree':
+		pkeys = Phidict.keys()
+		pkeys.sort()
+		for key in pkeys:
+			pdec = range(len(Phidict[key]))
+			for pd in pdec:
+				Phimat = np.vstack((Phimat,Phidict[key][pd][0]))
+
+
+
+def py_get_weak_rule(X,Y,Phidict,w,m):
 	"""
 	Input:
 		X : DxN array
@@ -289,11 +367,6 @@ def get_weak_rule(X,Y,Phidict,w,m):
 			can be "tree" or "stump"
 	"""
     
-	# This is going to be extremely slow for large
-	# number of features. Need to rewrite in 
-	# weave for major speed-up.
-	# - Anil, 07/03
-
 	(D,N) = X.shape
 	K = Y.shape[0]
 
