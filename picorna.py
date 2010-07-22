@@ -2,10 +2,8 @@ import urllib
 import json
 import time
 from mismatch import *
-import splitdata
-import boost
 import csv
-import numpy as np
+
 
 class Protein():
     """
@@ -172,9 +170,8 @@ class Picorna():
         for row in csv.reader(open(classfile,'r'), delimiter=','):
             try:
                 name, cls = row
-            except ValueError:
+            except:
                 print row
-		pdb.set_trace()
                 raise
             name_elements = name.split(' ')
             virus_id = name_elements[0]
@@ -235,26 +232,13 @@ class Picorna():
 if __name__=="__main__":
     import csv
     
-    v = Picorna(k=4,m=0)
-    v.parse()
+    v = Picorna(k=3,m=2)
+    v.parse(max_v = 2)
     
-    Xt, Yt = v.summarise()
+    X,Y = v.summarise()
+            
 
-    # save data for reuse (avoids re-parsing)
-    np.savez('picorna_virii_data', X=Xt, Y=Yt)
-
-    # make Xt, Yt memory-efficient
-    # would be good to do this from the get go
-    Xt = Xt.astype('int16')
-    Yt = Yt.astype('int16')
-
-    # number of folds of cross validation
-    Nfold = 10
-    # split the data indices into 10 random disjoint sets
-    Fidx = splitdata.cv_multiclass_fold(Yt,Nfold)
-
-    for f in range(Nfold):
-        # using each set as the test set and the rest as train sets
-        # split the data and run boosting
-        X, Y, x, y, Idx = splitdata.cv_split(Xt,Yt,Fidx[f])
-        boost.adaboostMH(X, Y, x, y, f, model='tree')
+    
+    
+    
+    
