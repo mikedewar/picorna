@@ -6,6 +6,7 @@ import splitdata
 import boost
 import csv
 import numpy as np
+import os
 
 class Protein():
     """
@@ -43,6 +44,7 @@ class Protein():
         """
         print "\tfinishing %s"%self.name
         self.data = "".join(self.lines)
+        print "\tgenerating features"
         self.feature = gen_features(self.data,m,beta)
         
     def __str__(self):
@@ -113,7 +115,13 @@ class Picorna():
         self.k = k
         self.m = m
         self.A = list('ACDEFGHIKLMNPQRSTVWY')
-        self.beta = form_all_kmers(self.A,self.k)
+        cmd = [
+            "grep -v NC_ picornavirus-proteins.fasta",
+            "grep -v '>'",
+            "tr '\n' '!'"
+        ]
+        x = os.popen(' | '.join(cmd)).next()
+        self.beta = form_all_kmers_in_string(self.k,x)
         self.viruses = []
         # a dictionary of label numbers to labels
         self.label_dict = {
@@ -236,7 +244,7 @@ if __name__=="__main__":
     import csv
     
     v = Picorna(k=4,m=0)
-    v.parse()
+    v.parse(max_v = 2)
     
     Xt, Yt = v.summarise()
 
@@ -258,3 +266,5 @@ if __name__=="__main__":
         # split the data and run boosting
         X, Y, x, y, Idx = splitdata.cv_split(Xt,Yt,Fidx[f])
         boost.adaboostMH(X, Y, x, y, f, model='tree')
+        
+
