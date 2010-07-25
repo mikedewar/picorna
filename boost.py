@@ -1,4 +1,6 @@
 import numpy as np
+#import scipy.weave as weave
+import weave
 import cPickle
 import time
 import pdb
@@ -111,7 +113,9 @@ def adaboostMH(X,Y,x,y,f,model='stump'):
 		starttime = time.time()
 
 		# choose the appropriate (leaf+weak rule) for the next prediction function
-		pstar, cstar, pastar, castar, cvalue = get_weak_rule(X, Y, Phidict, w, model)
+		pstar, cstar, pastar, cvalue = weave_get_weak_rule(X, Y, Phidict, w, model)
+		pstar, cstar, pastar, cvalue = py_get_weak_rule(X, Y, Phidict, w, model)
+		pdb.set_trace()
 		PX = (X[cstar:cstar+1, :] < cvalue)*1.
 		px = (x[cstar:cstar+1, :] < cvalue)*1.
 		order.append(cstar)
@@ -284,79 +288,113 @@ def classification_error(train_pred, test_pred, Y, y, thresh):
 def weave_get_weak_rule(X, Y, Phidict, w, m):
 	(D,N) = X.shape
 	K = Y.shape[0]
-	phimat = np.zeros((0,N),dtype='float')
+	phimat = np.zeros((0,N),dtype='int')
 
 	code = 	"""
-		float Zm = 1000000.;
 		float Z = 0;
-		int pstar = -1;
-		int cstar = -1;
-		int pastar = -1;
-		int castar = -1;
-		int cvalue = -1;
+		int pstar, cstar, pastar, cvalue;
 
-		for(int p=0;p<Nphimat[0];l++)
-		{
-			for(int d=0;d<NX[0];d++)
-			{
-				for(int cidx=0;cidx<NX[1];cidx++)
-				{
-					int c = X[d*NX[1]+cidx]
-				int r = inc[rc];
-				float Wp=0;
-float Wm=0;
-float Zml=0;
-float Zmg=0;
-float Wpg=0;
-float Wmg=0;
-for(int c=0;c<NXdx[1];c++)
-{
-int idx=Xdx[r*NXdx[1]+c];
-Wp = Wp + Twp[l*NTwp[1]+idx];
-Wm = Wm + Twm[l*NTwp[1]+idx];
-Zml = Wp*sqrt((Wm+eps)/(Wp+eps)) + Wm*sqrt((Wp+eps)/(Wm+eps)) - (Wp + Wm);
-Wpg = Swp[l] - Wp;
-Wmg = Swm[l] - Wm;
-Zmg = Wpg*sqrt((Wmg+eps)/(Wpg+eps)) + Wmg*sqrt((Wpg+eps)/(Wmg+eps)) - (Wpg + Wmg);
-                                        
-                                        if (Zml<=Zm)
-                                        {
-                                                adx = 0;
-                                                mpidx = l;
-                                                mcidx = r;
-                                                mcdx = c;
-                                                Zm = Zml;
-                                        }
-        
-                                        if (Zmg<=Zm)
-                                        {
-                                                adx = 1;
-                                                mpidx = l;
-                                                mcidx = r;
-                                                mcdx = c;
-                                                Zm = Zmg;
+		for (int p=0;p<Nphimat[0];p++) {
+			for (int d=0;d<NX[0];d++) {
+				int tidx_star;
+				int pidx_star;
+				float z_star = 0;
+
+				// loop over all threshold values
+				// possibly very redundant!
+				for (int tidx=0;tidx<NX[1];tidx++) {
+					int thresh = X[d*NX[1]+tidx];
+					// loop over the two decisions for
+					// each parent decision node
+					for (int pidx=0;pidx<2;pidx++) {
+
+						// loop over all clusters
+						for (int k=0;k<NY[0];k++) {
+							float Wg = 0;
+							float Wl = 0;
+							float zg = 0;
+							float zl = 0;
+							int vg = 0;
+							int vl = 0;
+							for (int n=0;n<NX[1];n++) {
+								if (X[d*NX[1]+n]>thresh) { 
+									Wg += w[k*NX[1]+n]*Y[k*NX[1]+n];
+								} else {
+									Wl += w[k*NX[1]+n]*Y[k*NX[1]+n];
+								}
+							}
+
+							if (Wg > 0) {
+								vg = 1;
+							} else {
+								vg = -1;
+							}
+
+							if (Wl > 0) {
+								vl = 1;
+							} else {
+								vl = -1;
+							}
+
+							for (int n=0;n<NX[1];n++) {
+								if (X[d*NX[1]+n]>thresh) {
+									zg += w[k*NX[1]+n]*Y[k*NX[1]+n]*vg;
+								} else {
+									zl += w[k*NX[1]+n]*Y[k*NX[1]+n]*vl;
+								}
+							}
+
+							if (zg > z_star || zl > z_star) {
+								z_star = fmax(zg,zl);
+								tidx_star = thresh;
+								pidx_star = pidx;
+							}
+						}
 					}
                                 }
+				
+				// choose better z
+				if (z_star>Z) {
+					pstar = p;
+					cstar = d;
+					cvalue = tidx_star;
+					pastar = pidx_star;
+				}
                         }
                 }
-                results[0] = Zm;
-                results[1] = mpidx;
-                results[2] = mcidx;
-                results[3] = mcdx;
-                results[4] = adx;
+
+                results[0] = pstar;
+                results[1] = cstar;
+                results[2] = pastar;
+                results[3] = cvalue;
 		"""
 
+	support = "#include <math.h>"
+
+	# the python code that calls the C++ number-cruncher
+	# via weave.inline
 	if m=='tree':
 		pkeys = Phidict.keys()
 		pkeys.sort()
 		for key in pkeys:
 			pdec = range(len(Phidict[key]))
 			for pd in pdec:
-				Phimat = np.vstack((Phimat,Phidict[key][pd][0]))
+				phimat = np.vstack((phimat,Phidict[key][pd][0]))
+		results = np.zeros((5,),dtype='float')
+
+		weave.inline(code, ['X','Y','phimat','w','results'], support_code = support, verbose=2, compiler='gcc-4')
+	elif m=='stump':
+		pass
+
+	pstar = pkeys[int(results[0])]
+	cstar = int(results[1])
+	pastar = int(results[2])
+	cvalue = results[3]
+
+	return pstar, cstar, pastar, cvalue
 
 
-
-def py_get_weak_rule(X,Y,Phidict,w,m):
+def py_get_weak_rule(X, Y, Phidict, w, m):
 	"""
 	Input:
 		X : DxN array
@@ -388,17 +426,13 @@ def py_get_weak_rule(X,Y,Phidict,w,m):
 					for pd in pdec:
 						# less-than decision
 						fi = Phidict[key][pd][0]*(X[d:d+1,:]<threshold)
-						Wp = (w*(fi*Y>0)).sum(1)
-						Wm = (w*(fi*Y<0)).sum(1)
-						vstar = (Wp-Wm>0)*2.-1.
+						vstar = ((w*fi*Y).sum(1)>0)*2.-1.
 						vstar = vstar.reshape(K,1)
 						z[tidx,2*pd+0] = (w*Y*vstar*fi).sum()
 
 						# greater-than decision
 						fi = Phidict[key][pd][0]*(X[d:d+1,:]>=threshold)
-						Wp = (w*(fi*Y>0)).sum(1)
-						Wm = (w*(fi*Y<0)).sum(1)
-						vstar = (Wp-Wm>0)*2.-1.
+						vstar = ((w*fi*Y).sum(1)>0)*2.-1.
 						vstar = vstar.reshape(K,1)
 						z[tidx,2*pd+1] = (w*Y*vstar*fi).sum()
 				
@@ -406,13 +440,11 @@ def py_get_weak_rule(X,Y,Phidict,w,m):
 					thresh, dec = np.argwhere(z==z.max())[0]
 					Z[p,d,1] = thresholds[int(thresh)]
 					Z[p,d,2] = int(dec)/2
-					Z[p,d,3] = int(dec)%2
 					
 
 		pstar, cstar = np.argwhere(Z[:,:,0]==Z[:,:,0].max())[0]
 		cvalue = int(Z[pstar,cstar,1])
 		pastar = int(Z[pstar,cstar,2])
-		castar = int(Z[pstar,cstar,3])
 		pstar = pkeys[pstar]
 
 	elif m=='stump':
@@ -442,4 +474,4 @@ def py_get_weak_rule(X,Y,Phidict,w,m):
 		cstar = np.argmax(Z[:,0])
 		astar = int(Z[cstar,1])
 
-	return pstar, cstar, pastar, castar, cvalue
+	return pstar, cstar, pastar, cvalue
