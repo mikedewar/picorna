@@ -233,15 +233,18 @@ class Picorna():
 
 
 if __name__=="__main__":
-    import csv
+#    import csv
     
-    v = Picorna(k=4,m=0)
-    v.parse()
+#    v = Picorna(k=3,m=0)
+#    v.parse()
     
-    Xt, Yt = v.summarise()
+#    Xt, Yt = v.summarise()
 
     # save data for reuse (avoids re-parsing)
-    np.savez('picorna_virii_data', X=Xt, Y=Yt)
+#    np.savez('picorna_virii_data', X=Xt, Y=Yt)
+    data = np.load('picorna_virii_data.npz')
+    Xt = data['X']
+    Yt = data['Y']
 
     # make Xt, Yt memory-efficient
     # would be good to do this from the get go
