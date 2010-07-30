@@ -55,11 +55,35 @@ def gen_features(x,m,beta):
     k = len(beta[0])
     all_kmers_in_x = form_all_kmers_in_string(k, x)
     alpha = np.array([list(a) for a in all_kmers_in_x])
-    beta = np.array([list(b) for b in beta])
+    beta  = np.array([list(b) for b in beta])
+    print alpha.shape
+    print beta.shape
     # form features
     n1,n2 = alpha.shape[0], beta.shape[0]
-    mismatches = np.repeat(alpha, n2, 0) != np.tile(beta, (n1,1))        
-    tested = np.sum(mismatches,1) <= m
+    print n1,n2
+    assert False, "here lie dragons"
+    #beta_tile = 
+    a_mm = np.memmap(
+        '/Users/mike/Data/picorna_features/alpha.dat',
+        mode="w+", 
+        shape = (n1*n2,4), 
+        dtype='|S1'
+    )
+    a_mm[:] = np.repeat(alpha, n2, 0)[:]
+    b_mm = np.memmap(
+        '/Users/mike/Data/picorna_features/beta.dat',
+        mode="w+", 
+        shape = (n1*n2,4), 
+        dtype='|S1'
+    )
+    b_mm[:] = np.repeat(alpha, n2, 0)[:]
+    tested = np.memmap(
+        '/Users/mike/Data/picorna_features/tested.dat',
+        mode="w+",
+        shape = (n1*n2,4),
+        dtype='|S1'
+    )     
+    tested[:] = (np.sum(a_mm != b_mm,1) <= m)[:]
     tested_reshaped = np.reshape(tested,(n2,n1))
     return np.sum(tested_reshaped,1)
 
