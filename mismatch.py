@@ -56,11 +56,18 @@ def gen_features(x,m,beta):
     y = np.array([list(yi) for yi in form_all_kmers_in_string(k, x)])
     b = np.array([list(bi) for bi in beta])    
     
+    print "beta contains %s kmers"%len(beta)
+    print "the current protein contains %s kmers"%y.shape[1]
+
+
     count = [sum(np.sum((bi!=y),1)<=m) for bi in b]
     assert len(count) == len(beta)
     return count
     
     raise NotImplementedError("run! run!")
+    
+    
+
     count = np.sum(
         np.reshape(
             np.sum(

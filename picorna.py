@@ -44,7 +44,7 @@ class Protein():
         """
         print "\tfinishing %s"%self.name
         self.data = "".join(self.lines)
-        print "\tgenerating features"
+        print "\t\tgenerating features"
         self.feature = gen_features(self.data,m,beta)
         
     def __str__(self):
