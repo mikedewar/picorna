@@ -56,14 +56,35 @@ def gen_features(x,m,beta):
     y = np.array([list(yi) for yi in form_all_kmers_in_string(k, x)])
     b = np.array([list(bi) for bi in beta])    
     
+<<<<<<< HEAD
     count = np.sum(np.reshape(
             np.sum(np.repeat(b,len(y),0) != np.tile(y,[len(b),1]), 1) <= m, 
             (len(beta),len(y))
-        ),
-        1
-    )
+=======
+    count = [sum(np.sum((bi!=y),1)<=m) for bi in b]
     assert len(count) == len(beta)
     return count
+    
+    raise NotImplementedError("run! run!")
+    count = np.sum(
+        np.reshape(
+            np.sum(
+                np.repeat(
+                    b,
+                    len(y),         # numer of repeats
+                    0               # repeat dim
+                ) != np.tile(
+                    y,
+                    [len(b),1]      # tile shape
+                ), 
+                1                   # inner sum
+            ) <= m, 
+            (len(beta), len(y))     # reshape size
+>>>>>>> bd3c40a177badad57ab559f9d3d300bcc5c0b61e
+        ),
+        1                           # outer sum
+    )
+    
     
     
     
