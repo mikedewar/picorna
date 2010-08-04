@@ -3,7 +3,7 @@ import json
 import time
 from mismatch import *
 import splitdata
-import boost
+#import boost
 import csv
 import numpy as np
 import os
@@ -242,7 +242,6 @@ class Picorna():
 
 if __name__=="__main__":
     import csv
-    
     v = Picorna(k=4,m=0)
     v.parse(max_v = 2)
     
@@ -250,21 +249,4 @@ if __name__=="__main__":
 
     # save data for reuse (avoids re-parsing)
     np.savez('picorna_virii_data', X=Xt, Y=Yt)
-
-    # make Xt, Yt memory-efficient
-    # would be good to do this from the get go
-    Xt = Xt.astype('int16')
-    Yt = Yt.astype('int16')
-
-    # number of folds of cross validation
-    Nfold = 10
-    # split the data indices into 10 random disjoint sets
-    Fidx = splitdata.cv_multiclass_fold(Yt,Nfold)
-
-    for f in range(Nfold):
-        # using each set as the test set and the rest as train sets
-        # split the data and run boosting
-        X, Y, x, y, Idx = splitdata.cv_split(Xt,Yt,Fidx[f])
-        boost.adaboostMH(X, Y, x, y, f, model='tree')
-        
-
+    
