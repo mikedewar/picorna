@@ -43,7 +43,7 @@ def gen_features(x,m,beta):
     x : list
         protein sequence
     m : int
-        number of mismatches
+        number of allowed mismatches
     beta : array
         all possible kmers
             
@@ -53,39 +53,18 @@ def gen_features(x,m,beta):
         count in `x` of each kmer in `beta` varying by `m` mismatches.
     """
     k = len(beta[0])
-    all_kmers_in_x = form_all_kmers_in_string(k, x)
-    alpha = np.array([list(a) for a in all_kmers_in_x])
-    beta  = np.array([list(b) for b in beta])
-    print alpha.shape
-    print beta.shape
-    # form features
-    n1,n2 = alpha.shape[0], beta.shape[0]
-    print n1,n2
-    assert False, "here lie dragons"
-    #beta_tile = 
-    a_mm = np.memmap(
-        '/Users/mike/Data/picorna_features/alpha.dat',
-        mode="w+", 
-        shape = (n1*n2,4), 
-        dtype='|S1'
+    y = np.array([list(yi) for yi in form_all_kmers_in_string(k, x)])
+    b = np.array([list(bi) for bi in beta])    
+    
+    raise NotImplementedError("run! run!")
+    count = np.sum(np.reshape(
+            np.sum(np.repeat(b,len(y),0) != np.tile(y,[len(b),1]), 1) <= m, 
+            (len(beta),len(y))
+        ),
+        1
     )
-    a_mm[:] = np.repeat(alpha, n2, 0)[:]
-    b_mm = np.memmap(
-        '/Users/mike/Data/picorna_features/beta.dat',
-        mode="w+", 
-        shape = (n1*n2,4), 
-        dtype='|S1'
-    )
-    b_mm[:] = np.repeat(alpha, n2, 0)[:]
-    tested = np.memmap(
-        '/Users/mike/Data/picorna_features/tested.dat',
-        mode="w+",
-        shape = (n1*n2,4),
-        dtype='|S1'
-    )     
-    tested[:] = (np.sum(a_mm != b_mm,1) <= m)[:]
-    tested_reshaped = np.reshape(tested,(n2,n1))
-    return np.sum(tested_reshaped,1)
-
+    assert len(count) == len(beta)
+    return count
+    
     
     
