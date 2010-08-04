@@ -56,7 +56,6 @@ def gen_features(x,m,beta):
     y = np.array([list(yi) for yi in form_all_kmers_in_string(k, x)])
     b = np.array([list(bi) for bi in beta])    
     
-    raise NotImplementedError("run! run!")
     count = np.sum(np.reshape(
             np.sum(np.repeat(b,len(y),0) != np.tile(y,[len(b),1]), 1) <= m, 
             (len(beta),len(y))
