@@ -70,17 +70,17 @@ def gen_features(x,m,beta):
             yield y[i*chunk_length:(i+1)*chunk_length]
     
     count = np.zeros(num_chunks,dtype=int16)
-    for i,yi in enumerate(chunk(y))
-        count += np.sum(
-            np.reshape(
-                np.sum(
-                    np.repeat(
-                        b,
+    for i,yi in enumerate(chunk(y)):
+        count += np.sum( 
+            np.reshape( 
+                np.sum( 
+                    np.r epeat(
+                        b ,
                         len(yi),         # numer of repeats
                         0               # repeat dim
                     ) != np.tile(
                         yi,
-                        [len(b),1]      # tile shape
+                        [l en(b),1]      # tile shape
                     ), 
                     1                   # inner sum
                 ) <= m, 
