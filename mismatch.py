@@ -74,13 +74,13 @@ def gen_features(x,m,beta):
         count += np.sum( 
             np.reshape( 
                 np.sum( 
-                    np.r epeat(
+                    np.repeat(
                         b ,
                         len(yi),         # numer of repeats
                         0               # repeat dim
                     ) != np.tile(
                         yi,
-                        [l en(b),1]      # tile shape
+                        [len(b),1]      # tile shape
                     ), 
                     1                   # inner sum
                 ) <= m, 
