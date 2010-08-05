@@ -59,10 +59,12 @@ def gen_features(x,m,beta):
     print "beta contains %s kmers"%len(beta)
     print "the current protein contains %s kmers"%y.shape[0]
     
-    np.sum(np.array([np.sum(b != yi,1)<=m for yi in y]),1)
+    count = np.zeros(len(beta),dtype=int)
+    for i,yi in enumerate(y):
+        print i
+        count += (np.sum(b != yi,1)<=m)
 
-
-    count = np.sum(
+    """count = np.sum(
         np.reshape(
             np.sum(
                 np.repeat(
@@ -79,6 +81,6 @@ def gen_features(x,m,beta):
         ),
         1                           # outer sum
     )
-    assert len(count) == len(beta) 
+    assert len(count) == len(beta)""" 
     return count
     
