@@ -58,19 +58,21 @@ def gen_features(x,m,beta):
     
     print "beta contains %s kmers"%len(beta)
     print "the current protein contains %s kmers"%y.shape[0]
-    
+    """ 
     count = np.zeros(len(beta),dtype=np.int16)
     for i,yi in enumerate(y):
         count += (np.sum(b != yi,1)<=m)
-    
+    """
     num_chunks = 10
     def chunk(y):
         chunk_length = round(len(y)/num_chunks)
         for i in range(num_chunks):
             yield y[i*chunk_length:(i+1)*chunk_length]
     
-    count = np.zeros(num_chunks,dtype=int16)
+    count = np.zeros(len(beta),dtype=np.int16)
+    print "boo"
     for i,yi in enumerate(chunk(y)):
+        print i
         count += np.sum( 
             np.reshape( 
                 np.sum( 
@@ -84,7 +86,7 @@ def gen_features(x,m,beta):
                     ), 
                     1                   # inner sum
                 ) <= m, 
-                (len(beta), len(y))     # reshape size
+                (len(beta), len(yi))     # reshape size
             ),
             1                           # outer sum
         )
