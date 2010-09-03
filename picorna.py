@@ -2,8 +2,6 @@ import urllib
 import json
 import time
 from mismatch import *
-import splitdata
-#import boost
 import csv
 import numpy as np
 import os
@@ -116,7 +114,7 @@ class Picorna():
         self.m = m
         self.A = list('ACDEFGHIKLMNPQRSTVWY')
         cmd = [
-            "grep -v NC_ picornavirus-proteins.fasta",
+            "grep -v NC_ /proj/ar2384/picorna/picornavirus-proteins.fasta",
             "grep -v '>'",
             "tr '\n' '!'"
         ]
@@ -130,7 +128,7 @@ class Picorna():
             3:"vertebrate"
         }
     
-    def parse(self,filename='picornavirus-proteins.fasta',max_v=None):
+    def parse(self,filename='/proj/ar2384/picorna/picornavirus-proteins.fasta',max_v=None):
         """
         This method parses a fasta file, populating the objects as it goes.
         
@@ -169,7 +167,7 @@ class Picorna():
             if len(self.viruses[-1].proteins):
                 self.viruses[-1].proteins[-1].finish(self.m,self.beta)
     
-    def assign_classes(self,classfile="classes.csv"):
+    def assign_classes(self,classfile="/proj/ar2384/picorna/classes.csv"):
         """
         This class reads the classfile which contains the ids, names and class
         labels, and associates the appropriate label with each virus and
@@ -249,5 +247,5 @@ if __name__=="__main__":
     Xt, Yt, D = v.summarise()
 
     # save data for reuse (avoids re-parsing)
-    #np.savez('picorna_virii_data', X=Xt, Y=Yt)
+    np.savez('/proj/ar2384/picorna/picorna_virii_data.npz', X=Xt, Y=Yt)
     
