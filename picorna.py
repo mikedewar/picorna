@@ -129,7 +129,6 @@ class Picorna():
             2:"plant",
             3:"vertebrate"
         }
-        
     
     def parse(self,filename='picornavirus-proteins.fasta',max_v=None):
         """
@@ -219,7 +218,9 @@ class Picorna():
             elements are the kmer counts within the mismatch value
         Y : KxN array
             where K = number of classes and Yij = 1 if the jth protein belongs
-            to the ith class, otherwise Yij = -1)
+            to the ith class, otherwise Yij = -1
+        D : dict
+            a mapping from the row index of X to each of the D kmers
         """
         feature_list = []
         for virus in self:
@@ -237,16 +238,16 @@ class Picorna():
                     else:
                         Y[i,j] = -1
                     j += 1
-        return X, Y
+        return X, Y, dict(zip(range(len(self.beta)),self.beta))
 
 
 if __name__=="__main__":
     import csv
     v = Picorna(k=7,m=3)
-    v.parse(max_v = 2)
+    v.parse(max_v = 0)
     
-    Xt, Yt = v.summarise()
+    Xt, Yt, D = v.summarise()
 
     # save data for reuse (avoids re-parsing)
-    np.savez('picorna_virii_data', X=Xt, Y=Yt)
+    #np.savez('picorna_virii_data', X=Xt, Y=Yt)
     

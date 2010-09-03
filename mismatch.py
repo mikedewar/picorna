@@ -24,7 +24,7 @@ def form_all_kmers_in_string(k,x):
     x : string
         the string from which you'd like to form all kmers
     """
-    strings = np.empty((k,len(x)-k),dtype=str)
+    strings = np.empty((k, len(x)-k), dtype=str)
     x = list(x)
     for i in range(k):
         strings[i,:] = x[i:-(k-i)]
@@ -63,31 +63,33 @@ def gen_features(x,m,beta):
     for i,yi in enumerate(y):
         count += (np.sum(b != yi,1)<=m)
     
-    num_chunks = 10
-    def chunk(y):
-        chunk_length = round(len(y)/num_chunks)
-        for i in range(num_chunks):
-            yield y[i*chunk_length:(i+1)*chunk_length]
     
-    count = np.zeros(num_chunks,dtype=int16)
-    for i,yi in enumerate(chunk(y)):
-        count += np.sum( 
-            np.reshape( 
-                np.sum( 
-                    np.repeat(
-                        b ,
-                        len(yi),         # numer of repeats
-                        0               # repeat dim
-                    ) != np.tile(
-                        yi,
-                        [len(b),1]      # tile shape
-                    ), 
-                    1                   # inner sum
-                ) <= m, 
-                (len(beta), len(y))     # reshape size
-            ),
-            1                           # outer sum
-        )
-    assert len(count) == len(beta)
+    if 0:
+        num_chunks = 10
+        def chunk(y):
+            chunk_length = round(len(y)/num_chunks)
+            for i in range(num_chunks):
+                yield y[i*chunk_length:(i+1)*chunk_length]
+    
+        count = np.zeros(num_chunks,dtype=np.int16)
+        for i,yi in enumerate(chunk(y)):
+            count += np.sum( 
+                np.reshape( 
+                    np.sum( 
+                        np.repeat(
+                            b ,
+                            len(yi),         # numer of repeats
+                            0               # repeat dim
+                        ) != np.tile(
+                            yi,
+                            [len(b),1]      # tile shape
+                        ), 
+                        1                   # inner sum
+                    ) <= m, 
+                    (len(beta), len(y))     # reshape size
+                ),
+                1                           # outer sum
+            )
+        assert len(count) == len(beta)
     return count
     
