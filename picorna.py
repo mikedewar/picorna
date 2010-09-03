@@ -2,8 +2,6 @@ import urllib
 import json
 import time
 from mismatch import *
-import splitdata
-#import boost
 import csv
 import numpy as np
 import os
@@ -129,7 +127,6 @@ class Picorna():
             2:"plant",
             3:"vertebrate"
         }
-        
     
     def parse(self,filename='/proj/ar2384/picorna/picornavirus-proteins.fasta',max_v=None):
         """
@@ -219,7 +216,9 @@ class Picorna():
             elements are the kmer counts within the mismatch value
         Y : KxN array
             where K = number of classes and Yij = 1 if the jth protein belongs
-            to the ith class, otherwise Yij = -1)
+            to the ith class, otherwise Yij = -1
+        D : dict
+            a mapping from the row index of X to each of the D kmers
         """
         feature_list = []
         for virus in self:
@@ -237,7 +236,7 @@ class Picorna():
                     else:
                         Y[i,j] = -1
                     j += 1
-        return X, Y
+        return X, Y, dict(zip(range(len(self.beta)),self.beta))
 
 
 if __name__=="__main__":
@@ -245,7 +244,7 @@ if __name__=="__main__":
     v = Picorna(k=5,m=2)
     v.parse()
     
-    Xt, Yt = v.summarise()
+    Xt, Yt, D = v.summarise()
 
     # save data for reuse (avoids re-parsing)
     np.savez('/proj/ar2384/picorna/picorna_virii_data.npz', X=Xt, Y=Yt)
