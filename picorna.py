@@ -244,7 +244,7 @@ class Picorna():
 if __name__=="__main__":
     import csv
     v = Picorna(k=7,m=3)
-    v.parse(max_v = 0)
+    v.parse(max_v = 1)
     
     Xt, Yt, D = v.summarise()
 

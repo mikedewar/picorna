@@ -59,37 +59,41 @@ def gen_features(x,m,beta):
     print "beta contains %s kmers"%len(beta)
     print "the current protein contains %s kmers"%y.shape[0]
     
-    count = np.zeros(len(beta),dtype=np.int16)
-    for i,yi in enumerate(y):
-        count += (np.sum(b != yi,1)<=m)
-    
-    
     if 0:
-        num_chunks = 10
-        def chunk(y):
-            chunk_length = round(len(y)/num_chunks)
-            for i in range(num_chunks):
-                yield y[i*chunk_length:(i+1)*chunk_length]
+        count = np.zeros(len(beta),dtype=np.int16)
+        for i,yi in enumerate(y):
+            count += (np.sum(b != yi,1)<=m)
     
-        count = np.zeros(num_chunks,dtype=np.int16)
-        for i,yi in enumerate(chunk(y)):
-            count += np.sum( 
-                np.reshape( 
-                    np.sum( 
-                        np.repeat(
-                            b ,
-                            len(yi),         # numer of repeats
-                            0               # repeat dim
-                        ) != np.tile(
-                            yi,
-                            [len(b),1]      # tile shape
-                        ), 
-                        1                   # inner sum
-                    ) <= m, 
-                    (len(beta), len(y))     # reshape size
-                ),
-                1                           # outer sum
-            )
-        assert len(count) == len(beta)
+    
+    
+    num_chunks = 10
+    def chunk(y):
+        chunk_length = round(len(y)/num_chunks)
+        for i in range(num_chunks):
+            yield y[i*chunk_length:(i+1)*chunk_length]
+
+    count = np.zeros(len(beta),dtype=np.int16)
+    for i,yi in enumerate(chunk(y)):
+        print "processing chunk %s of %s"%(i+1,num_chunks)
+        count += np.sum( 
+            np.reshape( 
+                np.sum( 
+                    np.repeat(          # repeat is len(yi)*len(b) x k
+                        b ,             # b is the array of all kmers
+                        len(yi),        # numer of repeats
+                        0               # repeat dim (rows)
+                    ) 
+                    != 
+                    np.tile(            # tile is len(yi)*len(b) x k
+                        yi,             # yi is the ith chunk of all kmers in string
+                        [len(b),1]      # tile shape
+                    ), 
+                    1                   # inner sum: result is len(yi)*len(b) x 1
+                ) <= m, 
+                (len(beta), len(yi))    # reshape size
+            ),
+            1                           # outer sum: result is len(beta)
+        )
+    assert len(count) == len(beta)
     return count
     
