@@ -4,6 +4,7 @@ import time
 from mismatch import *
 import csv
 import numpy as np
+import cPickle
 import os
 
 class Protein():
@@ -241,11 +242,17 @@ class Picorna():
 
 if __name__=="__main__":
     import csv
-    v = Picorna(k=7,m=3)
-    v.parse(max_v = 1)
+    K = 7
+    M = 3
+    v = Picorna(k=K,m=M)
+    v.parse()
     
     Xt, Yt, D = v.summarise()
 
     # save data for reuse (avoids re-parsing)
-    np.savez('/proj/ar2384/picorna/picorna_virii_data.npz', X=Xt, Y=Yt)
+    f = open('/proj/ar2384/picorna/picorna_virii_data_'+str(K)+'_'+str(M)+'.pkl')
+    cPickle.Pickler(f,protocol=2).dump(Xt)
+    cPickle.Pickler(f,protocol=2).dump(Yt)
+    cPickle.Pickler(f,protocol=2).dump(D)
+    f.close()
     
