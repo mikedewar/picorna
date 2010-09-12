@@ -2,10 +2,9 @@ import urllib
 import json
 import time
 from mismatch import *
-import splitdata
-#import boost
 import csv
 import numpy as np
+import cPickle
 import os
 
 class Protein():
@@ -116,7 +115,7 @@ class Picorna():
         self.m = m
         self.A = list('ACDEFGHIKLMNPQRSTVWY')
         cmd = [
-            "grep -v NC_ picornavirus-proteins.fasta",
+            "grep -v NC_ /proj/ar2384/picorna/picornavirus-proteins.fasta",
             "grep -v '>'",
             "tr '\n' '!'"
         ]
@@ -129,9 +128,8 @@ class Picorna():
             2:"plant",
             3:"vertebrate"
         }
-        
     
-    def parse(self,filename='picornavirus-proteins.fasta',max_v=None):
+    def parse(self,filename='/proj/ar2384/picorna/picornavirus-proteins.fasta',max_v=None):
         """
         This method parses a fasta file, populating the objects as it goes.
         
@@ -170,7 +168,7 @@ class Picorna():
             if len(self.viruses[-1].proteins):
                 self.viruses[-1].proteins[-1].finish(self.m,self.beta)
     
-    def assign_classes(self,classfile="classes.csv"):
+    def assign_classes(self,classfile="/proj/ar2384/picorna/classes.csv"):
         """
         This class reads the classfile which contains the ids, names and class
         labels, and associates the appropriate label with each virus and
@@ -182,7 +180,6 @@ class Picorna():
                 name, cls = row
             except ValueError:
                 print row
-		pdb.set_trace()
                 raise
             name_elements = name.split(' ')
             virus_id = name_elements[0]
@@ -219,15 +216,19 @@ class Picorna():
             elements are the kmer counts within the mismatch value
         Y : KxN array
             where K = number of classes and Yij = 1 if the jth protein belongs
-            to the ith class, otherwise Yij = -1)
+            to the ith class, otherwise Yij = -1
+        D : dict
+            a mapping from the row index of X to each of the D kmers
         """
-        feature_list = []
-        for virus in self:
-            for protein in virus:
-                feature_list.append(protein.feature)
-        X = np.vstack(feature_list).T
+        X = []
+        for mi in range(self.m):
+            feature_list = []
+            for virus in self:
+                for protein in virus:
+                    feature_list.append(protein.feature[mi])
+            X.append(np.vstack(feature_list).T)
         
-        Y = np.empty((len(self.label_dict), X.shape[1]))
+        Y = np.empty((len(self.label_dict), X[0].shape[1]))
         for i in range(Y.shape[0]):
             j = 0
             for virus in self:
@@ -237,16 +238,22 @@ class Picorna():
                     else:
                         Y[i,j] = -1
                     j += 1
-        return X, Y
+        return X, Y, dict(zip(range(len(self.beta)),self.beta))
 
 
 if __name__=="__main__":
     import csv
-    v = Picorna(k=7,m=3)
-    v.parse(max_v = 2)
+    K = 10
+    M = 3
+    v = Picorna(k=K,m=M)
+    v.parse()
     
-    Xt, Yt = v.summarise()
+    Xt, Yt, D = v.summarise()
 
     # save data for reuse (avoids re-parsing)
-    np.savez('picorna_virii_data', X=Xt, Y=Yt)
-    
+    for m in range(M):
+        f = open('/proj/ar2384/picorna/picorna_virii_data_'+str(K)+'_'+str(m)+'.pkl','w')
+        cPickle.Pickler(f,protocol=2).dump(Xt[m])
+        cPickle.Pickler(f,protocol=2).dump(Yt)
+        cPickle.Pickler(f,protocol=2).dump(D)
+        f.close()

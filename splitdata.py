@@ -71,9 +71,9 @@ def cv_split(Xt,Yt,sdx):
 	"""
 
 	if Yt.shape[1]==1:
-		tndx = np.zeros(Yt.shape,dtype='int8')
+		tndx = np.zeros(Yt.shape,dtype='int')
 	else:
-		tndx = np.zeros((Yt.shape[1],1),dtype='int8')
+		tndx = np.zeros((Yt.shape[1],1),dtype='int')
 	tndx[sdx,0] = 1
 	Tndx = 1 - tndx
 
@@ -82,15 +82,14 @@ def cv_split(Xt,Yt,sdx):
 	if Yt.shape[1]==1:
 		Y = Yt[Tndx.nonzero()[0]]
 	else:
-		Y = Yt[:,Tndx.nonzero()[0]]
+		Y = Yt.T[Tndx.nonzero()[0],:].T
 
 	# testing data
 	x = Xt[:,tndx.nonzero()[0]].astype('float')
 	if Yt.shape[1]==1:
 		y = Yt[tndx.nonzero()[0]]
 	else:
-		y = Yt[:,tndx.nonzero()[0]]
+		y = Yt.T[tndx.nonzero()[0],:].T
 	Sdx = Tndx.nonzero()[0]
-	
-	return X, Y, x, y, Sdx
 
+	return X, Y, x, y, Sdx

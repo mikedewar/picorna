@@ -27,7 +27,7 @@ def adaboostMH(X,Y,x,y,f,model='stump'):
 	n = x.shape[1]
 	
 	# Number of boosting rounds
-	T = 100
+	T = 30
 
 	"""
 	creating output files
@@ -38,7 +38,7 @@ def adaboostMH(X,Y,x,y,f,model='stump'):
 	dfname - a general dump of the test/train predictions 
 		for all T rounds is output in this file
 	"""	
-	filedir = './Adaboost/'
+	filedir = '/proj/ar2384/picorna/Adaboost/'
 	filetag = model+'_'+str(f)
 	onfname = filedir+'error'+filetag+'.txt'
 	tnfname = filedir+'decision'+filetag+'.pkl'
@@ -113,11 +113,10 @@ def adaboostMH(X,Y,x,y,f,model='stump'):
 		starttime = time.time()
 
 		# choose the appropriate (leaf+weak rule) for the next prediction function
-		pstar_py, cstar_py, pastar_py, cvalue_py, Z_py, wYfcsum0, wYfcsum1 = py_get_weak_rule(X, Y, Phidict, w, model)
+		#pstar, cstar, pastar, cvalue, Z = py_get_weak_rule(X, Y, Phidict, w, model)
 		pstar, cstar, pastar, cvalue, Z = weave_get_weak_rule(X, Y, Phidict, w, model)
-		pdb.set_trace()
-		PX = X[cstar:cstar+1, :]
-		px = x[cstar:cstar+1, :]
+		PX = (X[cstar:cstar+1, :]<cvalue)*1
+		px = (x[cstar:cstar+1, :]<cvalue)*1
 		order.append(t)
 
 		# Updating Tree and prediction dictionary
@@ -134,9 +133,9 @@ def adaboostMH(X,Y,x,y,f,model='stump'):
 			Phi = Phidict[pstar][pastar][0]*(aidx+((-1.)**aidx)*PX)
 			phi = phidict[pstar][pastar][0]*(aidx+((-1.)**aidx)*px)
 			# calculate optimal value of alpha for that decision
-			vstar = ((w*Y*Phi).sum(1) > 0)*2.-1.
-			vstar = vstar.reshape(K,1)
-			gamma = (w*Y*vstar*Phi).sum()
+			wYP = w*Y*Phi
+			vstar = ((wYP.sum(1) > 0)*2.-1.).reshape(K,1)
+			gamma = (wYP*vstar).sum()
 			a = 0.5*np.log((1+gamma)/(1-gamma))
 
 			# compute f(x) = \alpha * \phi(x) * v for each decision node
@@ -251,7 +250,7 @@ def roc_auc(train_pred,test_pred,Y,y,threshold='None'):
 	# a simple way to pick a threshold on the roc curve
 	dist = np.abs(TPR[:,0]-TPR[:,1])
 
-	return arTPR, artPR, Thresholds[dist.argmax()]
+	return arTPR, artPR, Thresholds[dist.argmax()-1]
 
 
 def classification_error(train_pred, test_pred, Y, y, thresh):
@@ -283,24 +282,69 @@ def classification_error(train_pred, test_pred, Y, y, thresh):
 
 def weave_get_weak_rule(X, Y, Phidict, w, m):
 	code = 	"""
-		float Z = 0;
+		double Z = 0;
 		int pstar, cstar, pastar, cvalue;
 		int D = NX[0];
 		int N = NX[1];
 		int P = Nfi[0];
 		int K = NY[0];
-		float vg, vl, zg, zl, Wg, Wl;
+		int T = Nthresholds[0];
+		double zg, zl, Wg, Wl;
+		double zr, tr;
 
-		// rewriting code from scratch
-		// couldn't explain odd column order behavior
+		for (int p=0;p<P;p++) {
+			for (int d=0;d<D;d++) {
+				// Loop over thresholds
+				zr = 0;
+				for (int t=0;t<T;t++) {
+					double threshold = thresholds[t];
+					zg = 0;
+					zl = 0;
 
-                results[0] = pstar;
-                results[1] = cstar;
-                results[2] = (int) pastar;
-                results[3] = cvalue;
+					for (int k=0;k<K;k++) {
+						Wg = 0;
+						Wl = 0;
+						for (int n=0;n<N;n++) {
+							if (X[d*N+n]>=threshold)
+								Wg += w[k*N+n] * Y[k*N+n] * fi[p*N+n];
+							else
+								Wl += w[k*N+n] * Y[k*N+n] * fi[p*N+n];
+						}
+						if (Wg>0)
+							zg += Wg;
+						else
+							zg -= Wg;
+						if (Wl>0)
+							zl += Wl;
+						else
+							zl -= Wl;
+					}
+
+					if (fmax(zg,zl)>zr) {
+						zr = fmax(zg,zl);
+						tr = threshold;
+					}
+			
+					if (zr>Z) {
+						Z = zr;
+						cvalue = threshold;
+						cstar = d;
+						pstar = p;
+					}
+				}
+				Zres[p*D*2+d*2] = zr;
+				Zres[p*D*2+d*2+1] = tr;
+			}
+		}
+
+		results[0] = pstar;
+		results[1] = cstar;
+		results[2] = cvalue;
 		"""
 
-	support = "#include <math.h>"
+	support = """
+		#include <math.h>
+		"""
 
 	# the python code that calls the C++ number-cruncher
 	# via weave.inline
@@ -317,18 +361,22 @@ def weave_get_weak_rule(X, Y, Phidict, w, m):
 			for pd in pdec:
 				fi = np.vstack((fi,Phidict[key][pd][0]))
 				porder.append(key)
-		results = np.zeros((4,),dtype='int')
+		results = np.zeros((3,),dtype='int')
+		Zres = np.zeros((len(porder),D,2),dtype='float')
 		fi = fi.astype('float')
-		Zres = np.zeros((len(porder),D),dtype='float')
+		thresholds = np.unique(X[:])
 
-		weave.inline(code, ['X','Y','fi','w','results','Zres'], support_code = support, verbose=2, compiler='gcc')
+		weave.inline(code, ['X','Y','fi','w','thresholds','Zres','results'], support_code = support, verbose=2, compiler='gcc')
 	elif m=='stump':
 		pass
 
 	pstar = porder[results[0]]
 	cstar = results[1]
-	pastar = results[2]
-	cvalue = results[3]
+	if results[0]:
+		pastar = 1-results[0]%2
+	else:
+		pastar = results[0]
+	cvalue = results[2]
 
 	return pstar, cstar, pastar, cvalue, Zres
 
@@ -354,39 +402,34 @@ def py_get_weak_rule(X, Y, Phidict, w, m):
 		Z = np.zeros((P,D,4),dtype='float32')
 		for p in range(P):
 			key = pkeys[p]
-			pdec = range(len(Phidict[key]))
+			plen = len(Phidict[key])
 			for d in range(D):
-				#thresholds = np.unique(X[d:d+1,:])
-				z = np.zeros((2*len(pdec),),dtype='float')
-				#for tidx in range(thresholds.size):
-				#	threshold = thresholds[tidx]
+				thresholds = np.unique(X[d:d+1,:])
+				tlen = thresholds.size
+				# dim0 = </> for parent; dim1 = </> for child; dim2 = threshold
+				z = np.zeros((plen,2,tlen),dtype='float')
+				for tidx in range(tlen):
+					threshold = thresholds[tidx]
+					for pd in range(plen):
+						# 'less-then' decision
+						fi = Phidict[key][pd][0]*(X[d:d+1,:]<threshold)
+						wYf = w*Y*fi
+						vstar = ((wYf.sum(1)>0)*2.-1.).reshape(K,1)
+						z[pd,0,tidx] = (wYf*vstar).sum()
 
-				for pd in pdec:
-					# less-than decision
-					fi = Phidict[key][pd][0]*X[d:d+1,:]
-					wYf = w*Y*fi
-					if d==0:
-						wYfcsum0 = wYf.cumsum(1)
-					vstar = (wYf.sum(1)>0)*2.-1.
-					vstar = vstar.reshape(K,1)
-					z[2*pd+0] = (wYf*vstar).sum()
-
-					# greater-than decision
-					fi = Phidict[key][pd][0]*(1.-X[d:d+1,:])
-					wYf = w*Y*fi
-					if d==0:
-						wYfcsum1 = wYf.cumsum(1)
-					vstar = (wYf.sum(1)>0)*2.-1.
-					vstar = vstar.reshape(K,1)
-					z[2*pd+1] = (wYf*vstar).sum()
+						# greater-than decision
+						fi = Phidict[key][pd][0]*(X[d:d+1,:]>=threshold)
+						wYf = w*Y*fi
+						vstar = ((wYf.sum(1)>0)*2.-1.).reshape(K,1)
+						z[pd,1,tidx] = (wYf*vstar).sum()
 
 				Z[p,d,0] = z.max()
-				dec = z.argmax()
-				Z[p,d,1] = dec/2
+				(Z[p,d,1],cl,Z[p,d,2]) = np.argwhere(z==z.max())[0]
+				Z[p,d,2] = thresholds[Z[p,d,2]]
 					
 		pstar, cstar = np.argwhere(Z[:,:,0]==Z[:,:,0].max())[0]
-		cvalue = 1
 		pastar = int(Z[pstar,cstar,1])
+		cvalue = int(Z[pstar,cstar,2])
 		pstar = pkeys[pstar]
 
 	elif m=='stump':
@@ -416,4 +459,4 @@ def py_get_weak_rule(X, Y, Phidict, w, m):
 		cstar = np.argmax(Z[:,0])
 		astar = int(Z[cstar,1])
 
-	return pstar, cstar, pastar, cvalue, Z[:,:,0], wYfcsum0, wYfcsum1
+	return pstar, cstar, pastar, cvalue, Z[:,:,[0,2]]
