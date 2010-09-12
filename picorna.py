@@ -244,7 +244,7 @@ class Picorna():
 if __name__=="__main__":
     import csv
     K = 10
-    M = 3
+    M = 8
     v = Picorna(k=K,m=M)
     v.parse()
     
