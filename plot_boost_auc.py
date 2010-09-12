@@ -42,6 +42,7 @@ for kidx in range(len(ks)):
     for midx in range(3):
         im[kidx].plot(range(X_max),test_roc[kidx,midx,:X_max],colors[midx]+'-o',label='m='+str(midx))
 
+    im[kidx].axes([0,X_max,0.5,1])
     im[kidx].set_xlabel('Boosting Round',fontsize=12)
     im[kidx].set_ylabel('Mean Test AUC',fontsize = 12)
     im[kidx].set_title('k = '+str(ks[kidx]),fontsize=14)
