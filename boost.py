@@ -33,7 +33,7 @@ def adaboostMH(X,Y,x,y,params,kmer_dict,model='stump'):
     m = params[2]
     
     # Number of boosting rounds
-    T = 50
+    T = 25
 
     """
     creating output files
@@ -104,7 +104,7 @@ def adaboostMH(X,Y,x,y,params,kmer_dict,model='stump'):
     # file format: boosting round, k-mer selected, 
     # train roc, train error, test roc, test error, time elapsed
     owrite = open(onfname,'w')
-    to_write = [-1, 'root', 'None', rocacc[0,1], 'None', rocacc[0,3], duration]
+    to_write = [-1, 'root', 'None', 0.5, rocacc[0,1], 0.5, rocacc[0,3], duration]
     owrite.write('\t'.join(map(str,to_write))+'\n')
     owrite.close()
     print to_write
@@ -128,7 +128,7 @@ def adaboostMH(X,Y,x,y,params,kmer_dict,model='stump'):
         # Updating Tree and prediction dictionary
         Phidict[t] = []; phidict[t] = []
         # FIXME: need to replace with actual k-mer
-        dectree[t] = [cstar]
+        dectree[t] = [[kmer_dict[cstar],cvalue]]
         dectree[pstar][pastar+1][1].append(t)
         Hweakrule = np.zeros((K,N),dtype='float')
         hweakrule = np.zeros((K,n),dtype='float')
@@ -173,7 +173,7 @@ def adaboostMH(X,Y,x,y,params,kmer_dict,model='stump'):
 
         # output data
         owrite = open(onfname,'a')
-        to_write = [t, kmer_dict[cstar], rocacc[t+1,0], rocacc[t+1,1],
+        to_write = [t, kmer_dict[cstar], cvalue, rocacc[t+1,0], rocacc[t+1,1],
                 rocacc[t+1,2], rocacc[t+1,3], duration]
         owrite.write('\t'.join(map(str,to_write))+'\n')
         owrite.close()
