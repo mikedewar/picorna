@@ -4,6 +4,7 @@ import time
 from mismatch import *
 import csv
 import numpy as np
+import cPickle
 import os
 
 class Protein():
@@ -179,7 +180,6 @@ class Picorna():
                 name, cls = row
             except ValueError:
                 print row
-		pdb.set_trace()
                 raise
             name_elements = name.split(' ')
             virus_id = name_elements[0]
@@ -220,13 +220,15 @@ class Picorna():
         D : dict
             a mapping from the row index of X to each of the D kmers
         """
-        feature_list = []
-        for virus in self:
-            for protein in virus:
-                feature_list.append(protein.feature)
-        X = np.vstack(feature_list).T
+        X = []
+        for mi in range(self.m):
+            feature_list = []
+            for virus in self:
+                for protein in virus:
+                    feature_list.append(protein.feature[mi])
+            X.append(np.vstack(feature_list).T)
         
-        Y = np.empty((len(self.label_dict), X.shape[1]))
+        Y = np.empty((len(self.label_dict), X[0].shape[1]))
         for i in range(Y.shape[0]):
             j = 0
             for virus in self:
@@ -241,11 +243,17 @@ class Picorna():
 
 if __name__=="__main__":
     import csv
-    v = Picorna(k=7,m=3)
-    v.parse(max_v = 1)
+    K = 10
+    M = 8
+    v = Picorna(k=K,m=M)
+    v.parse()
     
     Xt, Yt, D = v.summarise()
 
     # save data for reuse (avoids re-parsing)
-    np.savez('/proj/ar2384/picorna/picorna_virii_data.npz', X=Xt, Y=Yt)
-    
+    for m in range(M):
+        f = open('/proj/ar2384/picorna/picorna_virii_data_'+str(K)+'_'+str(m)+'.pkl','w')
+        cPickle.Pickler(f,protocol=2).dump(Xt[m])
+        cPickle.Pickler(f,protocol=2).dump(Yt)
+        cPickle.Pickler(f,protocol=2).dump(D)
+        f.close()
