@@ -3,10 +3,9 @@ import matplotlib.pyplot as plot
 import pdb
 
 ks = range(7,10)
-#ks = [10]
 ms = range(3)
-fs = range(3)
-T = 31
+fs = range(10)
+T = 16
 
 train_roc = np.zeros((len(ks),len(ms),len(fs),T),dtype='float')
 train_roc[:,:,:,0] = 0.5
@@ -24,15 +23,16 @@ for k in ks:
             t = 1
             for line in f:
                 row = line.strip().split('\t')
-                train_roc[kidx,midx,fidx,t] = row[2]
-                test_roc[kidx,midx,fidx,t] = row[4]
+                train_roc[kidx,midx,fidx,t] = row[-5]
+                test_roc[kidx,midx,fidx,t] = row[-3]
                 t += 1
             f.close()
 
 train_roc = np.mean(train_roc,2)
 test_roc = np.mean(test_roc,2)
+pdb.set_trace()
 
-X_max = 20
+X_max = 15
 colors = ['r','b','g','k','m','c']
 fig = []
 im = []

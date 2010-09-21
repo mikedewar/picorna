@@ -6,6 +6,7 @@ import csv
 import numpy as np
 import cPickle
 import os
+import pdb
 
 class Protein():
     """
@@ -225,7 +226,7 @@ class Picorna():
             feature_list = []
             for virus in self:
                 for protein in virus:
-                    feature_list.append(protein.feature[mi])
+                    feature_list.append(protein.feature[:,mi])
             X.append(np.vstack(feature_list).T)
         
         Y = np.empty((len(self.label_dict), X[0].shape[1]))
@@ -243,7 +244,7 @@ class Picorna():
 
 if __name__=="__main__":
     import csv
-    K = 10
+    K = 12
     M = 8
     v = Picorna(k=K,m=M)
     v.parse()

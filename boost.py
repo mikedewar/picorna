@@ -8,14 +8,16 @@ import pdb
 # machine epsilon
 EPS = np.finfo(np.double).tiny
 
-def adaboostMH(X,Y,x,y,params,kmer_dict,model='stump'):
+def adaboostMH(X, Y, x, y, predicted_labels, test_indices, params, kmer_dict, model='stump'):
     """
     Input:
         X : DxN array (Train data) 
         Y : KxN array (Train labels)
         x : Dxn array (Test data)
         y : Kxn array (Test labels)
-        params : tuple (fold index, kmer length, mismatch)
+        predicted_labels : 
+        test_indices : 
+        params : tuple (fold index, kmer length, mismatch, num of boosting rounds)
         kmer_dict : a dictionary mapping row id
                     to kmers.
         model : string
@@ -31,10 +33,8 @@ def adaboostMH(X,Y,x,y,params,kmer_dict,model='stump'):
     f = params[0]
     k = params[1]
     m = params[2]
+    T = params[3]
     
-    # Number of boosting rounds
-    T = 25
-
     """
     creating output files
     onfname - test/train errors and the selected feature 
@@ -169,6 +169,7 @@ def adaboostMH(X,Y,x,y,params,kmer_dict,model='stump'):
         tpred[:, :, t+1] = test_pred
         rocacc[t+1,0], rocacc[t+1,2], rocacc[t+1,4] = roc_auc(train_pred, test_pred, Y, y)
         rocacc[t+1,1], rocacc[t+1,3] = classification_error(train_pred, test_pred, Y, y, rocacc[t+1,4])
+        predicted_labels[test_indices,t] = test_pred.argmax(0)
         duration = time.time() - starttime
 
         # output data
@@ -191,6 +192,8 @@ def adaboostMH(X,Y,x,y,params,kmer_dict,model='stump'):
     cPickle.Pickler(dwrite,protocol=2).dump(tpred)
     cPickle.Pickler(dwrite,protocol=2).dump(rocacc)
     dwrite.close()
+
+    return predicted_labels
 
 def roc_auc(train_pred,test_pred,Y,y,threshold='None'):
     """
@@ -271,7 +274,6 @@ def classification_error(train_pred, test_pred, Y, y, thresh):
 
     (K,N) = Y.shape
     n = y.shape[1]
-    K = float(K)
 
     # train accuracy
 #    P = (train_pred>thresh)*1.
