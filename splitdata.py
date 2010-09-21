@@ -8,14 +8,18 @@ def cv_multiclass_fold(Y,num_fold):
 	of each class distributed among test sets
 	in a balanced way.
 
-	Input:	Y - KxN array	{1,-1}
-			indicates class membership
-		num_fold - integer > 0
-			number of cross-validation folds
-			to split the data into.
+	Arguments	
+    =========    
+    Y : KxN array	{1,-1}
+	    indicates class membership
+	num_fold : integer > 0
+		number of cross-validation folds
+		to split the data into.
 
-	Output:	Sidx - list of length 'num_fold' 
-			list of num_fold lists of test data indices
+	Returns
+    =======	
+    Sidx : list of length 'num_fold' 
+	    list of num_fold lists of test data indices
 	"""
 	
 	(K,N) = Y.shape
