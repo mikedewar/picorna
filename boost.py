@@ -29,6 +29,7 @@ def adaboostMH(X, Y, x, y, predicted_labels, test_indices, params, kmer_dict, mo
     (D,N) = X.shape
     K = Y.shape[0]
     n = x.shape[1]
+    test_indices.sort()
 
     f = params[0]
     k = params[1]
@@ -127,7 +128,6 @@ def adaboostMH(X, Y, x, y, predicted_labels, test_indices, params, kmer_dict, mo
 
         # Updating Tree and prediction dictionary
         Phidict[t] = []; phidict[t] = []
-        # FIXME: need to replace with actual k-mer
         dectree[t] = [[kmer_dict[cstar],cvalue]]
         dectree[pstar][pastar+1][1].append(t)
         Hweakrule = np.zeros((K,N),dtype='float')

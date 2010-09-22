@@ -4,8 +4,8 @@ import splitdata
 import boost
 import pdb
 
-k = 10
-M = 5
+k = 7
+M = 4
 for m in range(M):
     filename = '/proj/ar2384/picorna/picorna_virii_data_%d_%d.pkl' % (k,m)
     f = open(filename,'r')
