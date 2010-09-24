@@ -59,12 +59,16 @@ this approach to more difficult-to-classify virus families.
 \begin{figure}
 \begin{minipage}[t]{0.5\linewidth}
 \incgraph{plot_auc_12.pdf}
-\caption{\small{}}
+\caption{\small{Plot of test AUC as a function of boosting round for 12-mers. Note that the test AUC decreases
+after $m=5$ --- the optimal $m$-neighborhood necessary to capture predictive, conserved regions
+in the viral genome.}}
 \label{auc}
 \end{minipage}\quad
 \begin{minipage}[t]{0.5\linewidth}
 \incgraph{kmer_visualization_9.pdf}
-\caption{\small{}}
+\caption{\small{A visualization of the relative location on the amino acid sequence of the 
+($k$,$m$)--patterns of each of the first five 9-mers selected by Adaboost, with the viral proteins
+vertically stacked and grouped by host. The selected 9-mers are listed on the right in corresponding colors.}}
 \label{kmers}
 \end{minipage}
 \end{figure}
