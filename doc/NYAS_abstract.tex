@@ -1,9 +1,12 @@
-\documentclass[11pt,amsmath,amssymb,amstex]{article}
+\documentclass[11pt,amsmath,amstex]{article}
+\usepackage{amssymb}
 \usepackage[usenames,dvipsnames]{color}
 \usepackage[pdftex]{hyperref}
-%\usepackage[left=1.25cm,top=0.75cm,right=1.25cm,nohead,nofoot]{geometry}
+\usepackage[left=2.25cm,top=1.5cm,right=2.25cm]{geometry}
 \usepackage{graphicx}
 \usepackage{multicol}
+
+\newcommand{\incgraph}[1]{\includegraphics[width=\textwidth]{{#1}}}
 
 \begin{document}
 
@@ -22,7 +25,7 @@ Columbia University, New York, NY\\
 
 \input{nyasml_body}
 
-%\bibliographystyle{unsrt}
-%\bibliography{nyasml_ref}
+\bibliographystyle{unsrt}
+\bibliography{nyasml_ref}
 
 \end{document}
