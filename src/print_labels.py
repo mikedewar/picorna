@@ -18,7 +18,7 @@ f.close()
 
 # load virus classes
 classes = dict()
-c = open('../data/classes.csv','r')
+c = open('../data/picorna_classes.csv','r')
 for line in c:
     row = line.strip().split(',')
     virus_name = ' '.join(row[0].split()[1:])
