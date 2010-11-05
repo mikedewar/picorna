@@ -8,7 +8,7 @@ truncate = 10
 (k,m,fdx) = sys.argv[1].split(',')
 
 # load in tree from file
-f = open('Adaboost/decisiontree_%s_%s_%s.pkl' % (k,m,fdx),'r')
+f = open('../Adaboost/decisiontree_%s_%s_%s.pkl' % (k,m,fdx),'r')
 dectree = cPickle.load(f)
 order = cPickle.load(f)
 f.close()
@@ -16,7 +16,7 @@ order.insert(0,-1)
 order = order[:truncate]
 
 # load kmer dictionary
-f = open('picorna_virii_data_%s_%s.pkl' % (k,m),'r')
+f = open('../data/picorna_virii_data_%s_%s.pkl' % (k,m),'r')
 X = cPickle.load(f)
 Y = cPickle.load(f)
 kmer_dict = cPickle.load(f)
@@ -66,4 +66,4 @@ for o in order:
             for child in children:
                 graph.add_edge(dot.Edge(nodes[o][i],nodes[child][0]))
 
-graph.write_pdf('Adaboost/decisiontree_%s_%s_%s.pdf' % (k,m,fdx))
+graph.write_pdf('../Adaboost/decisiontree_%s_%s_%s.pdf' % (k,m,fdx))
