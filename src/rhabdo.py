@@ -89,7 +89,7 @@ class Rhabdo():
                 else:
                     Y[i,j] = -1
                 j += 1
-        return X, Y, dict(zip(range(len(self.beta)),self.beta))
+        return X, Y, dict(zip(range(len(self.beta)), self.beta))
              
 
 class Virus():
