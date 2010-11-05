@@ -169,7 +169,7 @@ class Picorna():
             if len(self.viruses[-1].proteins):
                 self.viruses[-1].proteins[-1].finish(self.m,self.beta)
     
-    def assign_classes(self,classfile="/proj/ar2384/picorna/classes.csv"):
+    def assign_classes(self,classfile="/proj/ar2384/picorna/data/picorna_classes.csv"):
         """
         This class reads the classfile which contains the ids, names and class
         labels, and associates the appropriate label with each virus and
