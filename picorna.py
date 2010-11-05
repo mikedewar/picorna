@@ -114,9 +114,10 @@ class Picorna():
         """
         self.k = k
         self.m = m
-        self.A = list('ACDEFGHIKLMNPQRSTVWY')
+#        self.A = list('ACDEFGHIKLMNPQRSTVWY')
+        self.A = list('AUGC')
         cmd = [
-            "grep -v NC_ /proj/ar2384/picorna/picornavirus-proteins.fasta",
+            "grep -v NC_ /proj/ar2384/picorna/rhabdovirus-proteins.fasta",
             "grep -v '>'",
             "tr '\n' '!'"
         ]
@@ -124,13 +125,17 @@ class Picorna():
         self.beta = form_all_kmers_in_string(self.k,x)
         self.viruses = []
         # a dictionary of label numbers to labels
+#        self.label_dict = {
+#            1:"invertebrate",
+#            2:"plant",
+#            3:"vertebrate"
+#        }
         self.label_dict = {
-            1:"invertebrate",
-            2:"plant",
-            3:"vertebrate"
+            1:"plant",
+            2:"animal"
         }
     
-    def parse(self,filename='/proj/ar2384/picorna/picornavirus-proteins.fasta',max_v=None):
+    def parse(self,filename='/proj/ar2384/picorna/rhabdovirus-proteins.fasta',max_v=None):
         """
         This method parses a fasta file, populating the objects as it goes.
         
@@ -169,7 +174,7 @@ class Picorna():
             if len(self.viruses[-1].proteins):
                 self.viruses[-1].proteins[-1].finish(self.m,self.beta)
     
-    def assign_classes(self,classfile="/proj/ar2384/picorna/classes.csv"):
+    def assign_classes(self,classfile="/proj/ar2384/picorna/rhabdo_classes.csv"):
         """
         This class reads the classfile which contains the ids, names and class
         labels, and associates the appropriate label with each virus and
