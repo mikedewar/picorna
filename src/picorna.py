@@ -253,7 +253,7 @@ if __name__=="__main__":
 
     # save data for reuse (avoids re-parsing)
     for m in range(M):
-        f = open('/proj/ar2384/picorna/picorna_virii_data_'+str(K)+'_'+str(m)+'.pkl','w')
+        f = open('/proj/ar2384/picorna/data/picorna_virii_data_'+str(K)+'_'+str(m)+'.pkl','w')
         cPickle.Pickler(f,protocol=2).dump(Xt[m])
         cPickle.Pickler(f,protocol=2).dump(Yt)
         cPickle.Pickler(f,protocol=2).dump(D)

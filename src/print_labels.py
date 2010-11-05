@@ -5,20 +5,20 @@ k = 7
 m = 2
 
 # load data
-f = open('picorna_virii_data_%d_%d.pkl' % (k,m),'r')
+f = open('../data/picorna_virii_data_%d_%d.pkl' % (k,m),'r')
 X = cPickle.load(f)
 Y = cPickle.load(f)
 f.close()
 
 # load predicted labels
-f = open('Adaboost/picorna_virii_test_output_%d_%d.pkl' % (k,m),'r')
+f = open('../Adaboost/picorna_virii_test_output_%d_%d.pkl' % (k,m),'r')
 Fidx = cPickle.load(f)
 predicted_labels = cPickle.load(f)
 f.close()
 
 # load virus classes
 classes = dict()
-c = open('classes.csv','r')
+c = open('../data/classes.csv','r')
 for line in c:
     row = line.strip().split(',')
     virus_name = ' '.join(row[0].split()[1:])
@@ -32,8 +32,8 @@ label_dict = {
 
 # write a text file listing true & predicted 
 # labels of viruses.
-f = open('compare_virus_labels_%d_%d.txt' % (k,m),'w')
-p = open('picornavirus-proteins.fasta','r')
+f = open('../compare_virus_labels_%d_%d.txt' % (k,m),'w')
+p = open('../data/picornavirus-proteins.fasta','r')
 idx = 0
 for line in p:
     if 'NC_' in line:

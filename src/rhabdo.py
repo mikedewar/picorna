@@ -72,8 +72,8 @@ class Virus():
 
 
 if __name__ == "__main__":
-    fasta = "rhabdovirus-proteins.fasta"
-    labels = "rhabdo_classes.csv"
+    fasta = "../data/rhabdovirus-proteins.fasta"
+    labels = "./data/rhabdo_classes.csv"
     k = 4
     m = 2
     test = Rhabdo(fasta,labels,k,m)

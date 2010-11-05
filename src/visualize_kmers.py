@@ -82,7 +82,7 @@ def plot_hit_matrix(hit_matrix,k,m,fold,kmers,viruses):
 #    plot.yticks(range(hit_matrix.shape[0]), tuple(viruses), rotation=50, fontsize=3)
     im.set_title('k = %d, m = %d, fold = %d' % (k,m,fold))
 
-    fname = 'Adaboost/kmer_visualization_%d_%d_%d.pdf' % (k,m,fold)
+    fname = '../Adaboost/kmer_visualization_%d_%d_%d.pdf' % (k,m,fold)
     fig.savefig(fname,dpi=(100),format='pdf')
 
 
@@ -94,7 +94,7 @@ if __name__=="__main__":
     
     # load classes
     classes = dict()
-    c = open('classes.csv','r')
+    c = open('../data/classes.csv','r')
     for line in c:
         row = line.strip().split(',')
         virus_name = ' '.join(row[0].split()[1:])
@@ -102,7 +102,7 @@ if __name__=="__main__":
 
     # load kmers
     kmers = []
-    f = open('Adaboost/errortree_%d_%d_%d.txt' % (k,m,fold),'r')
+    f = open('../Adaboost/errortree_%d_%d_%d.txt' % (k,m,fold),'r')
     f.readline()
     for l in range(7):
         line = f.readline()
@@ -111,7 +111,7 @@ if __name__=="__main__":
 
     # load protein strings
     proteins = []
-    p = open('picornavirus-proteins.fasta','r')
+    p = open('../data/picornavirus-proteins.fasta','r')
     protein = 'A'
     label = 0
     viruses = []
@@ -138,7 +138,7 @@ if __name__=="__main__":
     hit_matrix = compile_hit_matrix(proteins,kmers,m)
 
     # save compiled data
-    f = open('Adaboost/hitmatrix_%d_%d_%d.pkl' % (k,m,fold),'w')
+    f = open('../Adaboost/hitmatrix_%d_%d_%d.pkl' % (k,m,fold),'w')
     cPickle.Pickler(f,protocol=2).dump(hit_matrix)
     cPickle.Pickler(f,protocol=2).dump(viruses)
     cPickle.Pickler(f,protocol=2).dump(classes)
@@ -146,7 +146,7 @@ if __name__=="__main__":
     """
 
     # load data
-    f = open('Adaboost/hitmatrix_%d_%d_%d.pkl' % (k,m,fold),'r')
+    f = open('../Adaboost/hitmatrix_%d_%d_%d.pkl' % (k,m,fold),'r')
     hit_matrix = cPickle.load(f)
     viruses = cPickle.load(f)
     classes = cPickle.load(f)

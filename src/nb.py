@@ -3,7 +3,7 @@ import numpy as np
 import cPickle
 import splitdata
 
-fh = open('picorna_virii_data_8_2.pkl')
+fh = open('../data/picorna_virii_data_8_2.pkl')
 X = cPickle.load(fh)
 Y = cPickle.load(fh)
 z = cPickle.load(fh)
