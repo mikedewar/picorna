@@ -4,7 +4,7 @@ import cPickle
 import sys
 import pdb
 
-truncate = 10
+truncate = 6
 (k,m,fdx) = sys.argv[1].split(',')
 
 # load in tree from file
@@ -15,12 +15,14 @@ f.close()
 order.insert(0,-1)
 order = order[:truncate]
 
+"""
 # load kmer dictionary
 f = open('../data/picorna_virii_data_%s_%s.pkl' % (k,m),'r')
 X = cPickle.load(f)
 Y = cPickle.load(f)
 kmer_dict = cPickle.load(f)
 f.close()
+"""
 
 # initialize graph
 graph = dot.Dot(graph_type='digraph',size='9.')
@@ -28,14 +30,16 @@ graph = dot.Dot(graph_type='digraph',size='9.')
 # initialize nodes
 nodes = dict()
 for o in order:
-    k_id = dectree[o][0]
+#    k_id = dectree[o][0]
 
     # add a node for the k-mer to the dictionary of nodes
     if o==-1:
         nodename = 'Root'
     else:
-        kmer = kmer_dict[k_id]
-        nodename = '(%d) [|%s| >= c] ?' % (o,kmer)
+#        kmer = kmer_dict[k_id]
+        kmer = dectree[o][0][0]
+        threshold = dectree[o][0][1]
+        nodename = '(%d) [|%s| >= %d] ?' % (o,kmer,threshold)
     nodes[o] = [dot.Node(nodename,shape='box',fontsize='8.',fontcolor='blue')]
 
     # add a node for the decision output {True,False} to
@@ -66,4 +70,4 @@ for o in order:
             for child in children:
                 graph.add_edge(dot.Edge(nodes[o][i],nodes[child][0]))
 
-graph.write_pdf('../Adaboost/decisiontree_%s_%s_%s.pdf' % (k,m,fdx))
+graph.write_jpeg('fig/decisiontree_%s_%s_%s.jpg' % (k,m,fdx))
