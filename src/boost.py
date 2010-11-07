@@ -1,6 +1,5 @@
 import numpy as np
 import scipy.weave as weave
-#import weave
 import cPickle
 import time
 import pdb
@@ -8,7 +7,10 @@ import pdb
 # machine epsilon
 EPS = np.finfo(np.double).tiny
 
-def adaboostMH(X, Y, x, y, predicted_labels, test_indices, params, kmer_dict, model='stump'):
+# project path
+project_path = "/proj/ar2384/picorna/"
+
+def adaboost(X, Y, x, y, predicted_labels, test_indices, params, kmer_dict, model='stump'):
     """
     Input:
         X : DxN array (Train data) 
@@ -45,11 +47,10 @@ def adaboostMH(X, Y, x, y, predicted_labels, test_indices, params, kmer_dict, mo
     dfname - a general dump of the test/train predictions 
         for all T rounds is output in this file
     """    
-    filedir = '/proj/ar2384/picorna/Adaboost/'
-    filetag = model+'_%d_%d_%d' % (k,m,f)
-    onfname = filedir+'error'+filetag+'.txt'
-    tnfname = filedir+'decision'+filetag+'.pkl'
-    dfname = filedir+'dump'+filetag+'.pkl'
+    filetag = project_path+'cache/'+model+'_%d_%d_%d' % (k,m,f)
+    onfname = project_path+'Ãache/error'+filetag+'.txt'
+    tnfname = project_path+'cache/decision'+filetag+'.pkl'
+    dfname = project_path+'cache/dump'+filetag+'.pkl'
     
     # Initializing weight over examples - Uniform distribution
     w = np.ones(Y.shape, dtype='float')/(N*K)

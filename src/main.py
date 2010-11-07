@@ -4,16 +4,15 @@ import splitdata
 import boost
 import pdb
 
+project_path = '/proj/ar2384/picorna/'
+
 k = 7
 M = 4
 for m in range(M):
-    filename = '/proj/ar2384/picorna/picorna_virii_data_%d_%d.pkl' % (k,m)
-    f = open(filename,'r')
+    input_file = project_path+'cache/picorna_virii_data_%d_%d.pkl' % (k,m)
+    f = open(input_file,'r')
     Xt = cPickle.load(f)
     Yt = cPickle.load(f)
-    # quick hack to correct mis-labeling 
-    # remove later
-    Yt[:,[22,23]] = np.array([[-1.,-1.],[-1.,-1.],[1.,1.]])
     kmer_dict = cPickle.load(f)
     f.close()
 
@@ -35,10 +34,10 @@ for m in range(M):
         # using each set as the test set and the rest as train sets
         # split the data and run boosting
         X, Y, x, y, Idx = splitdata.cv_split(Xt,Yt,Fidx[fold])
-        predicted_labels = boost.adaboostMH(X, Y, x, y, predicted_labels, Fidx[fold], params, kmer_dict, model='tree')
+        predicted_labels = boost.adaboost(X, Y, x, y, predicted_labels, Fidx[fold], params, kmer_dict, model='tree')
 
-    filename = '/proj/ar2384/picorna/picorna_virii_test_output_%d_%d.pkl' % (k,m)
-    f = open(filename,'w')
+    output_file = project_path+'cache/picorna_virii_test_output_%d_%d.pkl' % (k,m)
+    f = open(output_file,'w')
     cPickle.Pickler(f,protocol=2).dump(Fidx)
     cPickle.Pickler(f,protocol=2).dump(predicted_labels)
     f.close()

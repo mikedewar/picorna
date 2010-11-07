@@ -2,6 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plot
 import pdb
 
+# project path
+project_path = '/proj/ar2384/picorna/'
+
 ks = range(7,10)
 ms = range(3)
 fs = range(10)
@@ -17,7 +20,7 @@ for k in ks:
     for m in ms:
         midx = ms.index(m)
         for fidx in fs:
-            filename = '/proj/ar2384/picorna/Adaboost/errortree_%d_%d_%d.txt' % (k,m,fidx)
+            filename = cache_path + 'cache/errortree_%d_%d_%d.txt' % (k,m,fidx)
             f = open(filename,'r')
             f.readline()
             t = 1
@@ -50,5 +53,5 @@ for kidx in range(len(ks)):
     for l in leg.get_texts():
         l.set_fontsize('10')
 
-    outfile = '/proj/ar2384/picorna/Adaboost/boosterror_%d.pdf' % ks[kidx]
+    outfile = project_path+'fig/boosterror_%d.pdf' % ks[kidx]
     fig[kidx].savefig(outfile,dpi=(100),format='pdf')

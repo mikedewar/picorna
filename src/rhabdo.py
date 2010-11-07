@@ -2,7 +2,7 @@ from mismatch import *
 import os
 import csv
 
-datapath = "/proj/ar2384/picorna/"
+project_path = '/proj/ar2384/picorna/'
 
 class Rhabdo():
     "class defining a set of Rhabdoviruses"
