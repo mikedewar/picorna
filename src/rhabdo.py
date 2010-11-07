@@ -2,6 +2,7 @@ from mismatch import *
 import os
 import csv
 
+datapath = "/proj/ar2384/picorna/"
 
 class Rhabdo():
     "class defining a set of Rhabdoviruses"
@@ -20,8 +21,7 @@ class Rhabdo():
         self.beta = form_all_kmers_in_string(self.k,x)
         self.label_dict = {
             1:"plant",
-            2:"vertebrate",
-            3:"invertebrate"
+            2:"animal",
         }
     
     def parse_fasta(self):
@@ -72,8 +72,8 @@ class Virus():
 
 
 if __name__ == "__main__":
-    fasta = "../data/rhabdovirus-proteins.fasta"
-    labels = "../data/rhabdo_classes.csv"
+    fasta = project_path+"data/rhabdovirus-proteins.fasta"
+    labels = project_path+"data/rhabdo_classes.csv"
     k = 4
     m = 2
     test = Rhabdo(fasta,labels,k,m)
