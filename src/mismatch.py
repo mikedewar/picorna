@@ -58,7 +58,7 @@ def gen_features(x,m,beta):
     b = np.array([list(bi) for bi in beta])    
     
     print "beta contains %s kmers"%len(beta)
-    print "the current protein contains %s kmers"%y.shape[0]
+    print "the current string contains %s kmers"%y.shape[0]
 
     count = np.zeros((len(beta),m),dtype=np.int16)
     for i,yi in enumerate(y):
