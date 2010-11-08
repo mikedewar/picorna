@@ -1,4 +1,6 @@
 from mismatch import *
+import numpy as np
+import cPickle
 import os
 import csv
 
@@ -112,19 +114,18 @@ class Virus():
 if __name__ == "__main__":
     fasta = project_path+"data/rhabdovirus-proteins.fasta"
     labels = project_path+"data/rhabdo_classes.csv"
-    k = 4
-    m = 2
-    test = Rhabdo(fasta,labels,k,m)
-    test.parse_fasta()
-    test.parse_labels()
+    K = 9
+    M = 6
+    v = Rhabdo(fasta,labels,K,M)
+    v.parse_fasta()
+    v.parse_labels()
     
-    X,Y,d = test.summarise()
+    Xt, Yt, D = v.summarise()
     
-    print X
-    print "\n"
-    print Y
-    print "\n"
-    print d
-    
-    
-    
+    # save data for reuse (avoids re-parsing)
+    for m in range(M):
+        f = open(project_path+'cache/rhabdo_virii_data_'+str(K)+'_'+str(m)+'.pkl','w')
+        cPickle.Pickler(f,protocol=2).dump(Xt[m])
+        cPickle.Pickler(f,protocol=2).dump(Yt)
+        cPickle.Pickler(f,protocol=2).dump(D)
+        f.close()
