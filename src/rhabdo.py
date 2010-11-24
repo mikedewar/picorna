@@ -110,12 +110,11 @@ class Virus():
                     
     
 
-
 if __name__ == "__main__":
     fasta = project_path+"data/rhabdovirus-proteins.fasta"
     labels = project_path+"data/rhabdo_classes.csv"
-    K = 9
-    M = 6
+    K = 30
+    M = 5
     v = Rhabdo(fasta,labels,K,M)
     v.parse_fasta()
     v.parse_labels()

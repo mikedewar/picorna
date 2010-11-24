@@ -10,7 +10,7 @@ EPS = np.finfo(np.double).tiny
 # project path
 project_path = "/proj/ar2384/picorna/"
 
-def adaboost(X, Y, x, y, predicted_labels, test_indices, params, kmer_dict, model='stump'):
+def adaboost(X, Y, x, y, predicted_labels, test_indices, params, kmer_dict, model='stump',virus_family='picorna'):
     """
     Input:
         X : DxN array (Train data) 
@@ -24,6 +24,7 @@ def adaboost(X, Y, x, y, predicted_labels, test_indices, params, kmer_dict, mode
                     to kmers.
         model : string
             can be "tree" or "stump"
+        virus_family : 'picorna' / 'rhabdo'
     """
 
     X = X.astype('float')
@@ -47,10 +48,10 @@ def adaboost(X, Y, x, y, predicted_labels, test_indices, params, kmer_dict, mode
     dfname - a general dump of the test/train predictions 
         for all T rounds is output in this file
     """    
-    filetag = project_path+'cache/'+model+'_%d_%d_%d' % (k,m,f)
-    onfname = project_path+'Ãache/error'+filetag+'.txt'
-    tnfname = project_path+'cache/decision'+filetag+'.pkl'
-    dfname = project_path+'cache/dump'+filetag+'.pkl'
+    filetag = model+'_%d_%d_%d' % (k,m,f)
+    onfname = project_path+'cache/'+virus_family+'_error'+filetag+'.txt'
+    tnfname = project_path+'cache/'+virus_family+'_decision'+filetag+'.pkl'
+    dfname = project_path+'cache/'+virus_family+'_dump'+filetag+'.pkl'
     
     # Initializing weight over examples - Uniform distribution
     w = np.ones(Y.shape, dtype='float')/(N*K)
@@ -230,10 +231,6 @@ def roc_auc(train_pred,test_pred,Y,y,threshold='None'):
         true_positive = (P*Y==1).sum()
         real_positive = 0.5*(1+Y).sum()
 
-        # precision-recall
-#        pred_positive = np.float(P.sum())
-#        TPR[tidx,:] = np.array([true_positive/pred_positive,true_positive/real_positive])
-
         # roc
         false_positive = (P*Y==-1).sum()
         real_negative = 0.5*(1-Y).sum()
@@ -243,10 +240,6 @@ def roc_auc(train_pred,test_pred,Y,y,threshold='None'):
         p = (test_pred>thresholds[tidx])
         true_positive = (p*y==1).sum()
         real_positive = 0.5*(1+y).sum()
-
-        # precision-recall
-#        pred_positive = np.float(p.sum())
-#        tPR[tidx,:] = np.array([true_positive/pred_positive,true_positive/real_positive])
 
         # roc
         false_positive = (p*y==-1).sum()
@@ -277,13 +270,9 @@ def classification_error(train_pred, test_pred, Y, y, thresh):
     n = y.shape[1]
 
     # train accuracy
-#    P = (train_pred>thresh)*1.
-#    trainacc = np.mean(((P*Y>0).sum(0))/(P.sum(0)+EPS))
     trainacc = (np.abs(train_pred.argmax(0)-Y.argmax(0))>0).sum()/float(N)
 
     # test accuracy     
-#    p = (test_pred>thresh)*1.
-#    testacc = np.mean(((p*y>0).sum(0))/(p.sum(0)+EPS))
     testacc = (np.abs(test_pred.argmax(0)-y.argmax(0))>0).sum()/float(n)
 
     return trainacc, testacc

@@ -1,6 +1,7 @@
 import numpy as np
 import itertools
 import timeit
+import time
 import pdb
 
 def form_all_kmers(A,k):
@@ -60,11 +61,14 @@ def gen_features(x,m,beta):
     print "beta contains %s kmers"%len(beta)
     print "the current string contains %s kmers"%y.shape[0]
 
+    starttime = time.time()
     count = np.zeros((len(beta),m),dtype=np.int16)
     for i,yi in enumerate(y):
         num_mismatches = np.sum(b != yi,1)
         for mi in range(m):
             count[:,mi] += (num_mismatches<=mi)
+    print "Loop Time = %.4f" % (time.time() - starttime)
+
     """
     
     num_chunks = 10
