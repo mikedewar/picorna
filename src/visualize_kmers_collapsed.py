@@ -3,6 +3,7 @@ import cPickle
 import matplotlib.pyplot as plot
 from matplotlib.transforms import Bbox
 from matplotlib.colors import colorConverter as convert
+import matplotlib.cm as colormap
 import pdb
 import sys
 
@@ -35,55 +36,61 @@ def compile_hit_matrix(proteins,kmers,m):
     return hit_matrix
 
 # plot hit matrix
-def plot_hit_matrix(hit_matrix,k,m,kmers,virus_family,project_path):
-    background_colors = {
-        'white' :   np.array([255,255,255]).reshape(1,3)/255.,
-        'black' :   np.array([0,0,0]).reshape(1,3)/255.,
-         'grey' :   np.array([38,38,38]).reshape(1,3)/255.,
-     'darkgrey' :   np.array([18,18,18]).reshape(1,3)/255.,
-     'offwhite' :   np.array([235,235,235]).reshape(1,3)/255.,
-    }
+def plot_hit_matrix(hit_matrix, k, m, kmers, virus_family, project_path):
+    text_color = 'k'
+    bg_color = 'w'
 
+    class_labels = np.unique(hit_matrix[:,0]).astype('int')
+    num_classes = class_labels.size
     (num_proteins,num_cols) = hit_matrix.shape
+    num_proteins = num_proteins + num_classes - 1
     num_cols = num_cols-1
     data = np.zeros((num_proteins,num_cols,3),dtype='float')
-    data[:,:,0] = hit_matrix[:,1:] 
-    data = data * np.array(list(convert.to_rgb('red'))).reshape(1,1,3)
-    pdb.set_trace()
-    
-    idx = (hit_matrix[:,0]==1).nonzero()[0]
-    data[idx,:,:] = data[idx,:,:] + (hit_matrix[idx,1:]==0).reshape(idx.size,num_cols,1) * background_colors['black'].reshape(1,1,3)
-    idx = (hit_matrix[:,0]==2).nonzero()[0]
-    data[idx,:,:] = data[idx,:,:] + (hit_matrix[idx,1:]==0).reshape(idx.size,num_cols,1) * background_colors['grey'].reshape(1,1,3)
-#    idx = (hit_matrix[:,0,0]==3).nonzero()[0]
-#    data[idx,:,:] = data[idx,:,:] + (1-(data[idx,:,:].sum(2)>0)).reshape(idx.size,C,1)*color_scheme['white']
+    for label in class_labels:
+        hit_idx = (hit_matrix[:,0]==label).nonzero()[0]
+        data_idx = hit_idx + ( label - 1 )
+        data[data_idx,:,0] = hit_matrix[hit_idx,1:]
+        data[data_idx,:,:] = data[data_idx,:,:] * np.array(list(convert.to_rgb('red'))).reshape(1,1,3)
+        try:
+            data[data_idx.max()+1,:,:] = 0.1
+        except IndexError:
+            continue
 
-    fig = plot.figure()
+    DPI = 300
+    fig_resolution = (1024, 768)
+    fig_size = tuple([res/float(DPI) for res in fig_resolution])
+    fig = plot.figure(figsize = fig_size, facecolor = bg_color, edgecolor = bg_color)
     im = fig.add_subplot(111)
-    im.set_position([0.03,0.07,0.97,0.88])
-    im.imshow(data,aspect='auto',interpolation='nearest')
-    im.axis([0,hit_matrix.shape[1]-1,0,hit_matrix.shape[0]])
-    im.set_xticks([0,hit_matrix.shape[1]-1])
-    im.set_xticklabels((0,1))
-    im.set_xlabel('Relative location')
+    im.set_position([0.03,0.04,0.95,0.87])
+    im.imshow(1.-hit_matrix[:,1:], cmap = colormap.gray, aspect='auto', interpolation='nearest')
+
+    for label in class_labels[:-1]:
+        y_coord = (hit_matrix[:,0]==label).nonzero()[0].max() + 0.5
+        im.plot([0,data.shape[1]-1], [y_coord, y_coord], '-', color = 'gray', linewidth = 0.1)
+
+    im.axis([0, data.shape[1]-1, 0, data.shape[0]-1])
+    im.set_xticks([0,data.shape[1]/2,data.shape[1]-1])
+    im.set_xticklabels(('0','Relative Location','1'), color = text_color, verticalalignment = 'center', fontsize = 6)
+    for line in im.get_xticklines():
+        line.set_markersize(0)
+#    y_labels = ('Invertebrate','Plant','Vertebrate')
     y_labels = ('Plant','Animal')
     y_label_loc = []
-    for c in np.unique(hit_matrix[:,0]):
+    for c in class_labels:
         y_label_loc.append(int(np.mean((hit_matrix[:,0]==c).nonzero()[0])))
     im.set_yticks(y_label_loc)
-    im.set_yticklabels(y_labels, rotation=90)
+    im.set_yticklabels(y_labels, rotation=90, color = text_color, horizontalalignment = 'center', fontsize = 6)
     for line in im.get_yticklines():
         line.set_markersize(0)
 
-    im.set_title('k = %d, m = %d' % (k,m))
+    fig.suptitle('k = %d, m = %d' % (k,m), x = 0.95, y = 0.95, color = text_color, fontsize = 8, verticalalignment = 'center', horizontalalignment = 'right')
 
     fname = project_path + 'fig/' + virus_family + '_kmer_visualization_collapsed_%d_%d.pdf' % (k,m)
-    fig.savefig(fname,dpi=(300),format='pdf')
+    fig.savefig(fname, transparent = True, format='pdf')
 
 
 if __name__=="__main__":
-#    project_path = '/proj/ar2384/picorna/'
-    project_path = '../'
+    project_path = '/proj/ar2384/picorna/'
     data_path = project_path + 'cache/'
     virus_family = 'rhabdo'
 
@@ -148,6 +155,7 @@ if __name__=="__main__":
     p.close()
     proteins.pop(0)
 
+    """
     hit_matrix = compile_hit_matrix(proteins,kmers,m)
 
     # save compiled data
@@ -164,9 +172,14 @@ if __name__=="__main__":
     viruses = cPickle.load(f)
     classes = cPickle.load(f)
     f.close()
-    """
     
     sort_indices = hit_matrix[:,0].argsort()
     sort_virus_id = [viruses[i] for i in sort_indices]
     sort_viruses = [classes[v][0] for v in sort_virus_id]
-    plot_hit_matrix(hit_matrix[sort_indices,:],k,m,kmers,virus_family,project_path)
+    plant_sequence_ids = hit_matrix[(hit_matrix[:,0]==1).nonzero()[0],1:].mean(0).nonzero()[0]
+    plant_sequence_hits = hit_matrix[(hit_matrix[:,0]==1).nonzero()[0],1:].mean(0)[plant_sequence_ids]
+    animal_sequence_ids = hit_matrix[(hit_matrix[:,0]==2).nonzero()[0],1:].mean(0).nonzero()[0]
+    animal_sequence_hits = hit_matrix[(hit_matrix[:,0]==2).nonzero()[0],1:].mean(0)[animal_sequence_ids]
+
+    pdb.set_trace()
+    plot_hit_matrix(hit_matrix[sort_indices,:], k, m, kmers, virus_family, project_path)

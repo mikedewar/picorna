@@ -4,11 +4,13 @@ import cPickle
 import sys
 import pdb
 
-truncate = 6
-(k,m,fdx) = sys.argv[1].split(',')
+(k,m,fdx,truncate) = sys.argv[1].split(',')
+project_path = '/proj/ar2384/picorna/'
+virus_family = 'rhabdo'
+truncate = int(truncate)
 
 # load in tree from file
-f = open('../Adaboost/decisiontree_%s_%s_%s.pkl' % (k,m,fdx),'r')
+f = open(project_path + 'cache/' + virus_family + '_decisiontree_%s_%s_%s.pkl' % (k,m,fdx),'r')
 dectree = cPickle.load(f)
 order = cPickle.load(f)
 f.close()
@@ -39,7 +41,7 @@ for o in order:
 #        kmer = kmer_dict[k_id]
         kmer = dectree[o][0][0]
         threshold = dectree[o][0][1]
-        nodename = '(%d) [|%s| >= %d] ?' % (o,kmer,threshold)
+        nodename = '(%d) [|%s| < %d] ?' % (o,kmer,threshold)
     nodes[o] = [dot.Node(nodename,shape='box',fontsize='8.',fontcolor='blue')]
 
     # add a node for the decision output {True,False} to
@@ -70,4 +72,4 @@ for o in order:
             for child in children:
                 graph.add_edge(dot.Edge(nodes[o][i],nodes[child][0]))
 
-graph.write_jpeg('fig/decisiontree_%s_%s_%s.jpg' % (k,m,fdx))
+graph.write_jpeg(project_path + 'fig/' + virus_family + '_decisiontree_%s_%s_%s.jpg' % (k,m,fdx))

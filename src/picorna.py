@@ -105,7 +105,7 @@ class Picorna():
     """
     class describing a set of picorna viruses
     """
-    def __init__(self,k,m):
+    def __init__(self,k,m,fasta_file,class_file):
         """
         k : int
             length of kmers to consider
@@ -114,9 +114,11 @@ class Picorna():
         """
         self.k = k
         self.m = m
+        self.fasta_file = fasta_file
+        self.class_file = class_file
         self.A = list('ACDEFGHIKLMNPQRSTVWY')
         cmd = [
-            "grep -v NC_ /proj/ar2384/picorna/picornavirus-proteins.fasta",
+            "grep -v NC_ %s" % self.fasta_file,
             "grep -v '>'",
             "tr '\n' '!'"
         ]
@@ -130,7 +132,7 @@ class Picorna():
             3:"vertebrate"
         }
     
-    def parse(self,filename='/proj/ar2384/picorna/picornavirus-proteins.fasta',max_v=None):
+    def parse(self,max_v=None):
         """
         This method parses a fasta file, populating the objects as it goes.
         
@@ -142,7 +144,7 @@ class Picorna():
         max_v : int
             maximum number of viruses you want - used for debugging
         """
-        f = open(filename,'r').readlines()
+        f = open(self.fasta_file,'r').readlines()
         f = [fi.strip() for fi in f]
         for line in f:
             if "NC_" in line:
@@ -169,14 +171,14 @@ class Picorna():
             if len(self.viruses[-1].proteins):
                 self.viruses[-1].proteins[-1].finish(self.m,self.beta)
     
-    def assign_classes(self,classfile="/proj/ar2384/picorna/data/picorna_classes.csv"):
+    def assign_classes(self):
         """
         This class reads the classfile which contains the ids, names and class
         labels, and associates the appropriate label with each virus and
         protein stored in the Picorna object.
         """
         
-        for row in csv.reader(open(classfile,'r'), delimiter=','):
+        for row in csv.reader(open(self.class_file,'r'), delimiter=','):
             try:
                 name, cls = row
             except ValueError:
@@ -225,35 +227,38 @@ class Picorna():
         for mi in range(self.m):
             feature_list = []
             for virus in self:
-                for protein in virus:
-                    feature_list.append(protein.feature[:,mi])
-            X.append(np.vstack(feature_list).T)
+                # virus gets kmer counts in all its proteins
+                feature_list.append(np.array([protein.feature[:,mi] for protein in virus]).sum(0))
+            X.append(np.array(feature_list).T)
         
         Y = np.empty((len(self.label_dict), X[0].shape[1]))
         for i in range(Y.shape[0]):
-            j = 0
-            for virus in self:
-                for protein in virus:
-                    if protein.label == self.label_dict[i+1]:
-                        Y[i,j] = 1
-                    else:
-                        Y[i,j] = -1
-                    j += 1
+            for j, virus in enumerate(self):
+                if virus.label == self.label_dict[i+1]:
+                    Y[i,j] = 1
+                else:
+                    Y[i,j] = -1
         return X, Y, dict(zip(range(len(self.beta)),self.beta))
 
 
 if __name__=="__main__":
     import csv
-    K = 12
-    M = 8
-    v = Picorna(k=K,m=M)
-    v.parse()
+    K = 6
+    M = 2
+    project_path = '/proj/ar2384/picorna/'
+    virus_family = 'picorna'
+    fasta_file = ''.join([project_path,'data/',virus_family,'virus-proteins.fasta'])
+    class_file = ''.join([project_path,'data/',virus_family,'_classes.csv'])
+    v = Picorna(k=K, m=M, fasta_file=fasta_file, class_file=class_file)
+    v.parse(max_v=1)
     
     Xt, Yt, D = v.summarise()
+    pdb.set_trace()
 
     # save data for reuse (avoids re-parsing)
     for m in range(M):
-        f = open('/proj/ar2384/picorna/data/picorna_virii_data_'+str(K)+'_'+str(m)+'.pkl','w')
+        out_filename = '%scache/picorna_temp/%s_virii_data_%d_%d.pkl' % (project_path, virus_family, K, m)
+        f = open(out_filename,'w')
         cPickle.Pickler(f,protocol=2).dump(Xt[m])
         cPickle.Pickler(f,protocol=2).dump(Yt)
         cPickle.Pickler(f,protocol=2).dump(D)

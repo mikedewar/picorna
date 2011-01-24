@@ -21,11 +21,11 @@ for m in range(M):
     Xt = Xt.astype('int16')
     Yt = Yt.astype('int16')
     Nt = Yt.shape[1]
-    T = 15
+    T = 40
     predicted_labels = np.zeros((Nt,T),dtype='int16')
 
     # number of folds of cross validation
-    Nfold = 5
+    Nfold = 10
 
     # split the data indices into 10 random disjoint sets
     Fidx = splitdata.cv_multiclass_fold(Yt,Nfold)
