@@ -7,11 +7,11 @@ import pdb
 import sys
 
 # compile hit matrix
-def compile_hit_matrix(proteins,kmers,m):
+def compile_hit_matrix(sequencess, kmers, m):
     col_size = 500
-    N_proteins = len(proteins)
+    N_sequences = len(sequences)
     N_kmers = len(kmers)
-    hit_matrix = np.zeros((N_proteins,col_size+1,N_kmers),dtype='float')
+    hit_matrix = np.zeros((N_sequences,col_size+1,N_kmers),dtype='float')
     kmer_length = len(kmers[0])
 
     # this dictionary stores a set of alpha values
@@ -20,27 +20,27 @@ def compile_hit_matrix(proteins,kmers,m):
     for i in range(m+1):
         options[i] = 1.
 
-    for pidx, protein in enumerate(proteins):
+    for index, seq in enumerate(sequences):
         # first column stores the virus class
-        hit_matrix[pidx,0,:] = protein[1]
-        protein = protein[0]
-        protein_length = len(protein)
-        for c in range(protein_length-kmer_length+1):
+        hit_matrix[index,0,:] = seq[1]
+        sequence = seq[0]
+        sequence_length = len(sequence)
+        for c in range(sequence_length-kmer_length+1):
             for kidx, kmer in enumerate(kmers):
-                mismatch = (np.array(list(protein[c:c+kmer_length]))!=np.array(list(kmer))).sum()
+                mismatch = (np.array(list(sequence[c:c+kmer_length]))!=np.array(list(kmer))).sum()
                 try:
                     value = options[mismatch]
-                    left_col = int(c * float(col_size) / (protein_length-kmer_length+1)) + 1
-                    right_col = max([int((c+kmer_length) * float(col_size) / (protein_length-kmer_length+1)),left_col+1])
-                    hit_value = hit_matrix[pidx,left_col:right_col,kidx]
-                    hit_matrix[pidx,left_col:right_col,kidx] = hit_value * (hit_value>=value) + value * (hit_value<value)
                 except KeyError:
                     continue
+                left_col = int(c * float(col_size) / (sequence_length-kmer_length+1)) + 1
+#               right_col = max([int((c+kmer_length) * float(col_size) / (sequence_length-kmer_length+1)),left_col+1])
+                right_col = min([left_col+2,sequence_length-kmer_length+1])
+                hit_matrix[index,left_col:right_col,kidx] = value 
 
     return hit_matrix
 
 # plot hit matrix
-def plot_hit_matrix(hit_matrix,k,m,fold,kmers,virus_family,project_path):
+def plot_hit_matrix(hit_matrix, k, m, fold, kmers, virus_family, sequence_type, project_path):
     background_colors = {
         'white' :   np.array([255,255,255]).reshape(1,3)/255.,
         'black' :   np.array([0,0,0]).reshape(1,3)/255.,
@@ -92,18 +92,18 @@ def plot_hit_matrix(hit_matrix,k,m,fold,kmers,virus_family,project_path):
         except IndexError:
             pdb.set_trace()
 
-    fname = project_path + 'fig/' + virus_family + '_kmer_visualization_%d_%d_%d.pdf' % (k,m,fold)
+    fname = project_path + 'fig/%s_%s_kmer_visualization_%d_%d_%d.pdf' % (virus_family, sequence_type, k, m, fold)
     fig.savefig(fname,dpi=(300),format='pdf')
 
 
 if __name__=="__main__":
-#    project_path = '/proj/ar2384/picorna/'
-    project_path = '../'
-    data_path = project_path + 'cache/'
+    project_path = '/proj/ar2384/picorna/'
     virus_family = 'rhabdo'
+    sequence_type = 'protein'
+    data_path = project_path + 'cache/%s_temp/' % virus_family
 
     # k,m values
-    (k, m, fold) = map(int,sys.argv[1:4])
+    (k, m, T, fold) = map(int,sys.argv[1:5])
     
     # load classes
     classes = dict()
@@ -119,48 +119,45 @@ if __name__=="__main__":
     decision_tree = cPickle.load(f)
     order = cPickle.load(f)
     f.close()
-    [kmers.append(decision_tree[o][0][0]) for o in order if decision_tree[o][0][0] not in kmers] 
+    [kmers.append(decision_tree[o][0][0]) for o in order[:T] if decision_tree[o][0][0] not in kmers] 
 
-    # load protein strings
-    proteins = []
-    protein = 'A'
+    # load virus sequences
+    sequences = []
+    sequence = 'A'
     label = 0
     viruses = []
     p = open(project_path + 'data/' + virus_family + 'virus-proteins.fasta','r')
-    # THIS NEEDS TO BE GENERALIZED!
-    if virus_family == 'picorna':
+    
+    if sequence_type == 'protein':
         for line in p:
-            if 'NC_' in line or '>' in line:
-                proteins.append([protein,label])
-                if 'NC_' in line:
-                    row = line.strip().split(',')
-                    virus_name = ' '.join(row[0].split()[1:])
-                    virus_id = row[0].split()[0]
-                    viruses.append(virus_id)
-                    label = classes[virus_id][1]
-                    protein = ''
-                else:
-                    viruses.append(virus_id)
-                    protein = ''
-                    continue 
+            if 'NC_' in line or 'virus' in line:
+                sequences.append([sequence,label])
+                row = line.strip().split(',')
+                virus_name = ' '.join(row[0].split()[1:])
+                virus_id = row[0].split()[0]
+                viruses.append(virus_id)
+                label = classes[virus_id][1]
+                sequence = ''
+            elif '>' in line:
+                continue
             else:
-                protein += line.strip()
-    elif virus_family == 'rhabdo':
+                sequence += line.strip()
+    elif sequence_type == 'dna':
         for line in p:
-            if 'NC_' in line or '>' in line:
-                proteins.append([protein,label])
+            if 'virus' in line:
+                sequences.append([sequence,label])
                 row = line.strip().split(',')
                 virus_name = ' '.join(row[0].split()[1:])
                 virus_id = row[0].split()[0][1:]
                 viruses.append(virus_id)
                 label = classes[virus_id][1]
-                protein = ''
+                sequence = ''
             else:
-                protein = line.strip()
+                sequence += line.strip()
     c.close()
     p.close()
-    proteins.pop(0)
-    hit_matrix = compile_hit_matrix(proteins,kmers,m)
+    sequences.pop(0)
+    hit_matrix = compile_hit_matrix(sequences,kmers,m)
 
     # save compiled data
     f = open(data_path + virus_family + '_hitmatrix_%d_%d_%d.pkl' % (k,m,fold),'w')
@@ -177,8 +174,7 @@ if __name__=="__main__":
     classes = cPickle.load(f)
     f.close()
     """
-    
     sort_indices = hit_matrix[:,0,0].argsort()
     sort_virus_id = [viruses[i] for i in sort_indices]
     sort_viruses = [classes[v][0] for v in sort_virus_id]
-    plot_hit_matrix(hit_matrix[sort_indices,:,:],k,m,fold,kmers,virus_family,project_path)
+    plot_hit_matrix(hit_matrix[sort_indices,:,:], k, m, fold, kmers, virus_family, sequence_type, project_path)

@@ -49,9 +49,9 @@ def adaboost(X, Y, x, y, predicted_labels, test_indices, params, kmer_dict, mode
         for all T rounds is output in this file
     """    
     filetag = model+'_%d_%d_%d' % (k,m,f)
-    onfname = project_path+'cache/'+virus_family+'_error'+filetag+'.txt'
-    tnfname = project_path+'cache/'+virus_family+'_decision'+filetag+'.pkl'
-    dfname = project_path+'cache/'+virus_family+'_dump'+filetag+'.pkl'
+    onfname = project_path+'cache/%s_temp/%s_error%s.txt' % (virus_family, virus_family, filetag)
+    tnfname = project_path+'cache/%s_temp/%s_decision%s.pkl' % (virus_family, virus_family, filetag)
+    dfname = project_path+'cache/%s_temp/%s_dump%s.pkl' % (virus_family, virus_family, filetag)
     
     # Initializing weight over examples - Uniform distribution
     w = np.ones(Y.shape, dtype='float')/(N*K)
@@ -70,10 +70,16 @@ def adaboost(X, Y, x, y, predicted_labels, test_indices, params, kmer_dict, mode
     # root decision function always outputs 1.
     v = ((w*Y).sum(1)>0)*2.-1.
     v = v.reshape(K,1)
-    # gamma = 'edge' of the weak rule
-    gamma = (w*Y*v).sum()
+    # compute cumulative weights
+    Yv = Y*v
+    Wp = (w*(Yv>0)).sum()
+    Wm = (w*(Yv<0)).sum()
     # a = coefficient of weak rule
-    a = 0.5*np.log((1+gamma)/(1-gamma))
+    a = 0.5*np.log((Wp+EPS)/(Wm+EPS))
+
+    if a<0:
+        a = np.abs(a)
+        v = -1*v
 
     # update decision tree and prediction list.
     Phi = np.ones((1,N), dtype='float32')
@@ -143,8 +149,14 @@ def adaboost(X, Y, x, y, predicted_labels, test_indices, params, kmer_dict, mode
             # calculate optimal value of alpha for that decision
             wYP = w*Y*Phi
             vstar = ((wYP.sum(1) > 0)*2.-1.).reshape(K,1)
-            gamma = (wYP*vstar).sum()
-            a = 0.5*np.log((1+gamma)/(1-gamma))
+            YvP = Y*vstar*Phi
+            Wp = (w*(YvP==1)).sum()
+            Wm = (w*(YvP==-1)).sum()
+
+            a = 0.5*np.log((Wp+EPS)/(Wm+EPS))
+            if a<0:
+                a = np.abs(a)
+                v = -1*v
 
             # compute f(x) = \alpha * \phi(x) * v for each decision node
             Hweakrule += a*vstar*Phi
@@ -279,59 +291,90 @@ def classification_error(train_pred, test_pred, Y, y, thresh):
 
 
 def weave_get_weak_rule(X, Y, Phidict, w, m):
-    code =     """
-        double Z = 0;
+    code = """
+        double Lmin = 1e10;
         int pstar, cstar, pastar, cvalue;
         int D = NX[0];
         int N = NX[1];
         int P = Nfi[0];
         int K = NY[0];
         int T = Nthresholds[0];
-        double zg, zl, Wg, Wl;
-        double zr, tr;
+        double Wgp, Wgm, Wlp, Wlm, Wo;
+        double W, Wgkp, Wgkm, Wlkp, Wlkm;
+        double Wmin, tstar;
 
         for (int p=0;p<P;p++) {
             for (int d=0;d<D;d++) {
                 // Loop over thresholds
-                zr = 0;
+                Wmin = 1e10;
                 for (int t=0;t<T;t++) {
                     double threshold = thresholds[t];
-                    zg = 0;
-                    zl = 0;
+                    Wgp = 0;
+                    Wgm = 0;
+                    Wlp = 0;
+                    Wlm = 0;
+                    Wo = 0;
 
                     for (int k=0;k<K;k++) {
-                        Wg = 0;
-                        Wl = 0;
+                        Wgkp = 0;
+                        Wgkm = 0;
+                        Wlkp = 0;
+                        Wlkm = 0;
+
                         for (int n=0;n<N;n++) {
-                            if (X[d*N+n]>=threshold)
-                                Wg += w[k*N+n] * Y[k*N+n] * fi[p*N+n];
-                            else
-                                Wl += w[k*N+n] * Y[k*N+n] * fi[p*N+n];
+                            if (fi[p*N+n]==0)
+                                Wo += w[k*N+n];
+                            else if (X[d*N+n]>=threshold) {
+                                if (Y[k*N+n]==1)
+                                    Wgkp += w[k*N+n];
+                                else
+                                    Wgkm += w[k*N+n];
+                            }
+                            else {
+                                if (Y[k*N+n]==1)
+                                    Wlkp += w[k*N+n];
+                                else
+                                    Wlkm += w[k*N+n];
+                            }
                         }
-                        if (Wg>0)
-                            zg += Wg;
-                        else
-                            zg -= Wg;
-                        if (Wl>0)
-                            zl += Wl;
-                        else
-                            zl -= Wl;
+
+                        if (Wgkp>=Wgkm) {
+                            Wgp += Wgkp;
+                            Wgm += Wgkm;
+                        }
+                        else {
+                            Wgp += Wgkm;
+                            Wgm += Wgkp;
+                        }
+
+                        if (Wlkp>=Wlkm) {
+                            Wlp += Wlkp;
+                            Wlm += Wlkm;
+                        }
+                        else {
+                            Wlp += Wlkm;
+                            Wlm += Wlkp;
+                        }
+
                     }
 
-                    if (fmax(zg,zl)>zr) {
-                        zr = fmax(zg,zl);
-                        tr = threshold;
+                    W = 2 * sqrt(Wgp*Wgm) + 2 * sqrt(Wlp*Wlm) + Wo;
+
+                    if (W<Wmin) {
+                        Wmin = W;
+                        tstar = threshold;
                     }
-            
-                    if (zr>Z) {
-                        Z = zr;
+
+                    if (Wmin<Lmin) {
+                        Lmin = Wmin;
                         cvalue = threshold;
                         cstar = d;
                         pstar = p;
                     }
+            
                 }
-                Zres[p*D*2+d*2] = zr;
-                Zres[p*D*2+d*2+1] = tr;
+                Zres[p*D*2+d*2] = Wmin;
+                Zres[p*D*2+d*2+1] = tstar;
             }
         }
 

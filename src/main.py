@@ -1,16 +1,16 @@
 import numpy as np
 import cPickle
 import splitdata
-import boost
+import boost_mod as boost
 import pdb
 
 project_path = '/proj/ar2384/picorna/'
 virus_family = 'rhabdo'
 
-k = 25
-M = 5
+k = 8
+M = 4
 for m in range(M):
-    input_file = project_path+'cache/'+virus_family+'_virii_data_%d_%d.pkl' % (k,m)
+    input_file = project_path+'cache/%s_temp/%s_virii_data_%d_%d.pkl' % (virus_family, virus_family, k, m)
     f = open(input_file,'r')
     Xt = cPickle.load(f)
     Yt = cPickle.load(f)
@@ -21,7 +21,7 @@ for m in range(M):
     Xt = Xt.astype('int16')
     Yt = Yt.astype('int16')
     Nt = Yt.shape[1]
-    T = 40
+    T = 20
     predicted_labels = np.zeros((Nt,T),dtype='int16')
 
     # number of folds of cross validation
@@ -37,7 +37,7 @@ for m in range(M):
         X, Y, x, y, Idx = splitdata.cv_split(Xt,Yt,Fidx[fold])
         predicted_labels = boost.adaboost(X, Y, x, y, predicted_labels, Fidx[fold], params, kmer_dict, model='tree', virus_family=virus_family)
 
-    output_file = project_path+'cache/'+virus_family+'_virii_test_output_%d_%d.pkl' % (k,m)
+    output_file = project_path+'cache/%s_temp/%s_virii_test_output_%d_%d.pkl' % (virus_family, virus_family, k, m)
     f = open(output_file,'w')
     cPickle.Pickler(f,protocol=2).dump(Fidx)
     cPickle.Pickler(f,protocol=2).dump(predicted_labels)

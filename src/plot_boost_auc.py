@@ -6,10 +6,10 @@ import pdb
 project_path = '/proj/ar2384/picorna/'
 virus_family = 'rhabdo'
 
-ks = [25]
-ms = range(5)
-fs = range(5)
-T = 41
+ks = [8]
+ms = range(4)
+fs = range(10)
+T = 21
 
 train_roc = np.zeros((len(ks),len(ms),len(fs),T),dtype='float')
 train_roc[:,:,:,0] = 0.5
@@ -21,7 +21,7 @@ for k in ks:
     for m in ms:
         midx = ms.index(m)
         for fidx in fs:
-            filename = project_path + 'cache/'+virus_family+'_errortree_%d_%d_%d.txt' % (k,m,fidx)
+            filename = project_path + 'cache/%s_temp/%s_errortree_%d_%d_%d.txt' % (virus_family, virus_family, k,m,fidx)
             f = open(filename,'r')
             f.readline()
             t = 1
@@ -68,13 +68,13 @@ for kidx in range(len(ks)):
 
     im[kidx].axis([0,X_max,0.5,1])
     fig[kidx].suptitle('k = %d (Adaboost)' % (ks[kidx]), x=0.97, y=0.95, color=text_color, fontsize=8, verticalalignment='top', horizontalalignment='right')
-    fig[kidx].patch.set_alpha(0)
-    im[kidx].patch.set_alpha(1)
+#    fig[kidx].patch.set_alpha(0)
+#    im[kidx].patch.set_alpha(1)
     
 
     leg = im[kidx].legend(loc=4, ncol=2, numpoints=1, labelspacing=0.001, columnspacing=0.1, handlelength=0.5, handletextpad=0.1, frameon=False)
     for l in leg.get_texts():
         l.set_fontsize('5')
 
-    outfile = project_path+'fig/'+virus_family+'_boosterror_%d.pdf' % ks[kidx]
+    outfile = project_path+'fig/'+virus_family+'_protein_boosterror_%d.pdf' % ks[kidx]
     fig[kidx].savefig(outfile,dpi=DPI,format='pdf')

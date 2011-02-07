@@ -117,8 +117,9 @@ class Picorna():
         self.fasta_file = fasta_file
         self.class_file = class_file
         self.A = list('ACDEFGHIKLMNPQRSTVWY')
+        # might need to change [0-9] to NC_ for picorna
         cmd = [
-            "grep -v NC_ %s" % self.fasta_file,
+            "grep -v [0-9] %s" % self.fasta_file,
             "grep -v '>'",
             "tr '\n' '!'"
         ]
@@ -127,9 +128,11 @@ class Picorna():
         self.viruses = []
         # a dictionary of label numbers to labels
         self.label_dict = {
-            1:"invertebrate",
-            2:"plant",
-            3:"vertebrate"
+            #1:"invertebrate",
+            #2:"plant",
+            #3:"vertebrate"
+            1:"plant",
+            2:"animal"
         }
     
     def parse(self,max_v=None):
@@ -147,7 +150,7 @@ class Picorna():
         f = open(self.fasta_file,'r').readlines()
         f = [fi.strip() for fi in f]
         for line in f:
-            if "NC_" in line:
+            if ("NC_" in line or "virus" in line) and ">" not in line:
                 full_name = line.split(",")[0]
                 name_elements = full_name.split(' ')
                 virus_name = ' '.join(name_elements[1:])
@@ -243,21 +246,23 @@ class Picorna():
 
 if __name__=="__main__":
     import csv
-    K = 6
-    M = 2
+    K = 8
+    M = 4
     project_path = '/proj/ar2384/picorna/'
-    virus_family = 'picorna'
+    virus_family = 'rhabdo'
     fasta_file = ''.join([project_path,'data/',virus_family,'virus-proteins.fasta'])
     class_file = ''.join([project_path,'data/',virus_family,'_classes.csv'])
     v = Picorna(k=K, m=M, fasta_file=fasta_file, class_file=class_file)
-    v.parse(max_v=1)
+    v.parse()
     
+    f = open('dump8.pkl','w')
+    cPickle.Pickler(f,protocol=2).dump(v)
+    f.close()
     Xt, Yt, D = v.summarise()
-    pdb.set_trace()
 
     # save data for reuse (avoids re-parsing)
     for m in range(M):
-        out_filename = '%scache/picorna_temp/%s_virii_data_%d_%d.pkl' % (project_path, virus_family, K, m)
+        out_filename = '%scache/%s_temp/%s_virii_data_%d_%d.pkl' % (project_path, virus_family, virus_family, K, m)
         f = open(out_filename,'w')
         cPickle.Pickler(f,protocol=2).dump(Xt[m])
         cPickle.Pickler(f,protocol=2).dump(Yt)
